@@ -32,4 +32,6 @@ uint64_t load_task_img(int taskid)
         src++;
     }
     return start_address;
+
+    return 0;
 }

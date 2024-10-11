@@ -24,7 +24,7 @@ main:
 	lui a0,%hi(msg)
 	addi a0,a0,%lo(msg)
 	jal  bios_func_entry
-	
+
 	// TODO: [p1-task2] call BIOS to read kernel in SD card
 	li a7,BIOS_SDREAD
 	li a0,kernel
@@ -32,8 +32,7 @@ main:
 	lh a1,(t0)
 	li a2,1
 	jal bios_func_entry
-	
-	
+
 	// TODO: [p1-task4] load task-related arguments and pass them to kernel
 
 	//lw a0,os_precise_size_loc
@@ -49,5 +48,5 @@ stop:
 
 .data
 
-msg: .string "It's chenweilun's bootloader...\n\r"
+msg: .string "It's a bootloader...\n\r"
 
