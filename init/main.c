@@ -33,18 +33,6 @@ char buf[VERSION_BUF];
 task_info_t tasks[TASK_MAXNUM];
 int tasknum;
 
-static int bss_check(void)
-{
-    for (int i = 0; i < VERSION_BUF; ++i)
-    {
-        if (buf[i] != 0)
-        {
-            return 0;
-        }
-    }
-    return 1;
-}
-
 static void init_jmptab(void)
 {
     volatile long (*(*jmptab))() = (volatile long (*(*))())KERNEL_JMPTAB_BASE;
@@ -65,7 +53,7 @@ static void init_jmptab(void)
     jmptab[MUTEX_RELEASE]   = (long (*)())do_mutex_lock_release;
 
     // TODO: [p2-task1] (S-core) initialize system call table.
-
+    jmptab[SYSCALL_REFLUSH] = (long(*)())screen_reflush;
 }
 
 static void init_task_info(void)
@@ -111,7 +99,17 @@ static void init_pcb_stack(
       */
     regs_context_t *pt_regs =
         (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
-
+        for(int i=0;i<32;i++)
+        {
+            pt_regs->regs[i]=0;
+        }
+        pt_regs->regs[2]=user_stack;
+        pt_regs->regs[4]=(reg_t)pcb;
+        pt_regs->sepc = entry_point;
+        pt_regs->scause = 0x0;
+        pt_regs->sstatus = SR_SPIE;//indicates that before interrupts are enabled
+        pt_regs->sstatus&=~SR_SPP;//indicates user mode
+        pt_regs->sbadaddr = 0x0;
 
     /* TODO: [p2-task1] set sp to simulate just returning from switch_to
      * NOTE: you should prepare a stack, and push some values to
@@ -120,22 +118,109 @@ static void init_pcb_stack(
     switchto_context_t *pt_switchto =
         (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
 
+    /*for(int i=0;i<14;i++)
+    {
+        pt_switchto->regs[i]=0;
+    }
+    pt_switchto->regs[0] = entry_point;//ra
+    pt_switchto->regs[1] = user_stack;//sp
+    */
+    pcb->user_sp = user_stack;
+    pcb->kernel_sp = (ptr_t)pt_regs;
 }
 
 static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
+    //initialize pid0 and other pcb
+    pid0_pcb.cursor_x=0;
+    pid0_pcb.cursor_y=0;
+    pid0_pcb.pid=0;
+    pid0_pcb.list.next=&pid0_pcb.list;
+    pid0_pcb.list.prev=&pid0_pcb.list;
+    pid0_pcb.status=TASK_BLOCKED;
+    pid0_pcb.wakeup_time=0;
+    for (int i = 0; i < NUM_MAX_TASK; i++)
+    {
+        pcb[i].pid=i+1;
+        pcb[i].status=TASK_EXITED;
+        pcb[i].list.next=&pcb[i].list;
+        pcb[i].list.prev=&pcb[i].list;
+        pcb[i].wakeup_time=0;
+        pcb[i].cursor_x=0;
+        pcb[i].cursor_y=0;
+    }   
 
-
+    
     /* TODO: [p2-task1] remember to initialize 'current_running' */
-
+    current_running = &pid0_pcb;
 }
 
 static void init_syscall(void)
 {
     // TODO: [p2-task3] initialize system call table.
+    syscall[SYSCALL_SLEEP] = do_sleep;
+    syscall[SYSCALL_YIELD] = do_scheduler;
+    syscall[SYSCALL_WRITE]=port_write;
+    syscall[SYSCALL_CURSOR]=screen_move_cursor;
+    syscall[SYSCALL_REFLUSH]=screen_reflush;
+    syscall[SYSCALL_GET_TIMEBASE]=get_time_base;
+    syscall[SYSCALL_GET_TICK]=get_ticks;
+    syscall[SYSCALL_LOCK_INIT]=do_mutex_lock_init;
+    syscall[SYSCALL_LOCK_ACQ]=do_mutex_lock_acquire;
+    syscall[SYSCALL_LOCK_RELEASE]=do_mutex_lock_release;
 }
 /************************************************************/
+
+void test()
+{
+    char *str1 ="fly";
+    char *str2 ="print1";
+    char *str3 ="print2";
+    char *str4 ="lock1";
+    char *str5 ="lock2";
+    reg_t entry;
+    for(int i=0;i<tasknum;i++)
+    {
+        if(strcmp(str1,tasks[i].name)==0)
+        {
+             printk("fly task found\n");
+              entry = load_task_img(i);
+              init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[0]);
+             pcb[0].status = TASK_READY;
+            LIST_ADD_TAIL(&ready_queue, &pcb[0].list);
+        }
+        else if(strcmp(str2,tasks[i].name)==0)
+         {
+              printk("print1 task found\n");
+              entry = load_task_img(i);
+              init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[1]);
+              pcb[1].status = TASK_READY;
+              LIST_ADD_TAIL(&ready_queue, &pcb[1].list);
+        }
+        else if(strcmp(str3,tasks[i].name)==0){
+            printk("print2 task found\n");
+            entry = load_task_img(i);
+             init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[2]);
+             pcb[2].status = TASK_READY;
+            LIST_ADD_TAIL(&ready_queue, &pcb[2].list);
+         }
+        else if(strcmp(str4,tasks[i].name)==0){
+            printk("lock1 task found\n");
+           entry = load_task_img(i);
+            init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[3]);
+             pcb[3].status = TASK_READY;
+             LIST_ADD_TAIL(&ready_queue, &pcb[3].list);
+         }else if(strcmp(str5,tasks[i].name)==0){
+            printk("lock2 task found\n");
+             entry = load_task_img(i);
+             init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[4]);
+             pcb[4].status = TASK_READY;
+             LIST_ADD_TAIL(&ready_queue, &pcb[4].list);
+         }
+    }
+}
+
 
 int main(void)
 {
@@ -151,6 +236,7 @@ int main(void)
 
     // Read CPU frequency (｡•ᴗ-)_
     time_base = bios_read_fdt(TIMEBASE);
+    printk("> [INIT] CPU frequency is %d Hz.\n", time_base);
 
     // Init lock mechanism o(´^｀)o
     init_locks();
@@ -175,18 +261,20 @@ int main(void)
 
     // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
     //   and then execute them.
-
+    test();
+    printk("> [INIT] Task initialization succeeded.\n");
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
     {
         // If you do non-preemptive scheduling, it's used to surrender control
+        
         do_scheduler();
-
         // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
         // enable_preempt();
         // asm volatile("wfi");
     }
     
+    /*
     char ch;
     char usr_input[100];
     int idx=0;
@@ -220,6 +308,6 @@ int main(void)
             //什么都不做
         }
     }
-
+    */
     return 0;
 }

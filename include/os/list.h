@@ -52,4 +52,35 @@ typedef list_node_t list_head;
 
 /* TODO: [p2-task1] implement your own list API */
 
+/*note : API below should be used with pointer instead of struct list_node */
+#define LIST_IS_EMPTY(head) ((head)->next == (head))
+
+#define NODE_TO_PCB(node) ((pcb_t*)((reg_t)node - 2 * sizeof(reg_t)))
+
+#define PCB_TO_NODE(pcb) ((list_node_t*)((reg_t)pcb + 2 * sizeof(reg_t)))
+
+#define LIST_ADD_HEAD(head, node) do { \
+    (node)->next = (head)->next; \
+    (node)->prev = (head); \
+    (head)->next->prev = (node); \
+    (head)->next = (node); \
+} while (0)
+
+#define LIST_ADD_TAIL(head, node) do { \
+    (node)->next = (head); \
+    (node)->prev = (head)->prev; \
+    (head)->prev->next = (node); \
+    (head)->prev = (node); \
+} while (0)
+
+#define LIST_REMOVE(node) do { \
+    (node)->prev->next = (node)->next; \
+    (node)->next->prev = (node)->prev; \
+} while (0)
+
+#define NODE_REFRESH(node) do { \
+    (node)->next = (node); \
+    (node)->prev = (node); \
+} while (0)
+
 #endif
