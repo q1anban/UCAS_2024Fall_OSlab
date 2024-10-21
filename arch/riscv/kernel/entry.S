@@ -201,7 +201,7 @@ ENTRY(ret_from_exception)
   // csrr s8,CSR_SSTATUS
   // csrr s9,CSR_SCAUSE
   // csrr s10,CSR_STVAL
-  csrr s11,CSR_SEPC
+  //csrr s11,CSR_SEPC
 
   sret
 

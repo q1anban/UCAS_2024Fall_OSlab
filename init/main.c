@@ -179,44 +179,59 @@ void test()
     char *str3 ="print2";
     char *str4 ="lock1";
     char *str5 ="lock2";
+    char *str6 = "sleep";
+    char *str7 = "timer";
     reg_t entry;
+    int s=0;
     for(int i=0;i<tasknum;i++)
     {
         if(strcmp(str1,tasks[i].name)==0)
         {
-             printk("fly task found\n");
-              entry = load_task_img(i);
-              init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[0]);
-             pcb[0].status = TASK_READY;
-            LIST_ADD_TAIL(&ready_queue, &pcb[0].list);
+            entry = load_task_img(i);
+            init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[s]);
+            pcb[s].status = TASK_READY;
+            LIST_ADD_TAIL(&ready_queue, &pcb[s].list);
+            s++;
         }
         else if(strcmp(str2,tasks[i].name)==0)
          {
-              printk("print1 task found\n");
               entry = load_task_img(i);
-              init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[1]);
-              pcb[1].status = TASK_READY;
-              LIST_ADD_TAIL(&ready_queue, &pcb[1].list);
+              init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[s]);
+              pcb[s].status = TASK_READY;
+              LIST_ADD_TAIL(&ready_queue, &pcb[s].list);
+              s++;
         }
         else if(strcmp(str3,tasks[i].name)==0){
-            printk("print2 task found\n");
             entry = load_task_img(i);
-             init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[2]);
-             pcb[2].status = TASK_READY;
-            LIST_ADD_TAIL(&ready_queue, &pcb[2].list);
+             init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[s]);
+             pcb[s].status = TASK_READY;
+            LIST_ADD_TAIL(&ready_queue, &pcb[s].list);
+            s++;
          }
         else if(strcmp(str4,tasks[i].name)==0){
-            printk("lock1 task found\n");
            entry = load_task_img(i);
-            init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[3]);
-             pcb[3].status = TASK_READY;
-             LIST_ADD_TAIL(&ready_queue, &pcb[3].list);
+            init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[s]);
+             pcb[s].status = TASK_READY;
+             LIST_ADD_TAIL(&ready_queue, &pcb[s].list);
+             s++;
          }else if(strcmp(str5,tasks[i].name)==0){
-            printk("lock2 task found\n");
              entry = load_task_img(i);
-             init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[4]);
-             pcb[4].status = TASK_READY;
-             LIST_ADD_TAIL(&ready_queue, &pcb[4].list);
+             init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[s]);
+             pcb[s].status = TASK_READY;
+             LIST_ADD_TAIL(&ready_queue, &pcb[s].list);
+             s++;
+         }else if(strcmp(str6,tasks[i].name)==0){
+             entry = load_task_img(i);
+             init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[s]);
+             pcb[s].status = TASK_READY;
+             LIST_ADD_TAIL(&ready_queue, &pcb[s].list);
+             s++;
+         }else if(strcmp(str7,tasks[i].name)==0){
+             entry = load_task_img(i);
+             init_pcb_stack(allocKernelPage(1),allocUserPage(1),entry, &pcb[s]);
+             pcb[s].status = TASK_READY;
+             LIST_ADD_TAIL(&ready_queue, &pcb[s].list);
+             s++;
          }
     }
 }
@@ -257,21 +272,26 @@ int main(void)
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
     
+    
 
 
     // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
     //   and then execute them.
     test();
     printk("> [INIT] Task initialization succeeded.\n");
+    set_timer(get_ticks() + TIMER_INTERVAL);
+    // do_scheduler();
+    // ret_from_exception();
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
     {
         // If you do non-preemptive scheduling, it's used to surrender control
         
-        do_scheduler();
+        // do_scheduler();
+        // ret_from_exception();
         // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
-        // enable_preempt();
-        // asm volatile("wfi");
+        enable_preempt();
+        asm volatile("wfi");
     }
     
     /*

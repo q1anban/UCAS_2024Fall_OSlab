@@ -48,5 +48,5 @@ stop:
 
 .data
 
-msg: .string "It's a bootloader...\n\r"
+msg: .string "It's chenweilun's bootloader...\n\r"
 

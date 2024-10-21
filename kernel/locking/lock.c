@@ -77,8 +77,8 @@ void do_mutex_lock_acquire(int mlock_idx)
         list_node_t *node = PCB_TO_NODE(current_running);
         current_running->status = TASK_BLOCKED;
         do_block(&mlocks[mlock_idx].block_queue, node);
+        do_scheduler();
     }
-    
 }
 
 //we assume that the blocked process will not be woken up until the lock is released , so this function is for the running process
@@ -93,7 +93,7 @@ void do_mutex_lock_release(int mlock_idx)
         pcb_t *pcb_ = NODE_TO_PCB(node);
         pcb_->status = TASK_READY;
     }
-    if(LIST_IS_EMPTY(&mlocks[mlock_idx].block_queue))//no more blocked processes
+    else//no more blocked processes
     {
         mlocks[mlock_idx].lock.status = UNLOCKED;
     }

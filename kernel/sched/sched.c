@@ -30,7 +30,7 @@ void do_scheduler(void)
     /************************************************************/
     /* Do not touch this comment. Reserved for future projects. */
     /************************************************************/
-
+    check_sleeping();
     // TODO: [p2-task1] Modify the current_running pointer.
     if(!LIST_IS_EMPTY(&ready_queue))
     {
@@ -52,7 +52,6 @@ void do_scheduler(void)
     current_running = next_pcb;
     // TODO: [p2-task1] switch_to current_running
     //switch_to(current_running, next_pcb);
-    ret_from_exception();
 }
 
 void do_sleep(uint32_t sleep_time)
@@ -61,8 +60,12 @@ void do_sleep(uint32_t sleep_time)
     // NOTE: you can assume: 1 second = 1 `timebase` ticks
     // 1. block the current_running
     current_running->status = TASK_BLOCKED;
+    LIST_REMOVE(&current_running->list);
+    LIST_ADD_TAIL(&sleep_queue, &current_running->list);
     // 2. set the wake up time for the blocked task
+    current_running->wakeup_time = get_ticks() + sleep_time * time_base;
     // 3. reschedule because the current_running is blocked.
+    do_scheduler();
 }
 
 //remove pcb_node from the ready_queue and add it to the block_queue. after that, call do_scheduler()
@@ -71,8 +74,6 @@ void do_block(list_node_t *pcb_node, list_head *queue)
     // TODO: [p2-task2] block the pcb task into the block queue
     LIST_REMOVE(pcb_node);
     LIST_ADD_TAIL(queue, pcb_node);
-    do_scheduler();
-    ret_from_exception();
 }
 
 //simply remove pcb_node from block_queue and add it to the ready_queue
