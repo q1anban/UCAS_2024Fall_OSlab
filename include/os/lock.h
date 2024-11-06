@@ -47,6 +47,7 @@ typedef struct mutex_lock
     spin_lock_t lock;
     list_head block_queue;
     int key;
+    int owner;
 } mutex_lock_t;
 
 void init_locks(void);
@@ -60,10 +61,16 @@ int do_mutex_lock_init(int key);
 void do_mutex_lock_acquire(int mlock_idx);
 void do_mutex_lock_release(int mlock_idx);
 
+void do_release_locks(int pid);
+
 /************************************************************/
 typedef struct barrier
 {
     // TODO [P3-TASK2 barrier]
+    int key;
+    int goal;
+    int count;
+    list_head wait_queue;
 } barrier_t;
 
 #define BARRIER_NUM 16
@@ -75,6 +82,8 @@ void do_barrier_destroy(int bar_idx);
 
 typedef struct condition
 {
+    int key;
+    list_head wait_queue;
     // TODO [P3-TASK2 condition]
 } condition_t;
 
@@ -105,6 +114,11 @@ void do_semaphore_destroy(int sema_idx);
 typedef struct mailbox
 {
     // TODO [P3-TASK2 mailbox]
+    char buffer[MAX_MBOX_LENGTH];
+    char name[32];
+    list_head wait_queue;
+    int length;
+    int ref_count;
 } mailbox_t;
 
 #define MBOX_NUM 16

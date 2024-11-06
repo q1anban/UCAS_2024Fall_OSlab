@@ -59,7 +59,7 @@ void init_exception()
     irq_table[IRQC_S_EXT] = handle_other;
     irq_table[IRQC_M_EXT] = handle_other;
     irq_table[IRQC_U_SOFT] = handle_other;
-    irq_table[IRQC_S_SOFT] = handle_other;
+    irq_table[IRQC_S_SOFT] = handle_other;//
     irq_table[IRQC_M_SOFT] = handle_other;
     /* TODO: [p2-task3] set up the entrypoint of exceptions */
     setup_exception();
