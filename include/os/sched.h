@@ -73,9 +73,7 @@ typedef struct pcb
 
     /* previous, next pointer */
     list_node_t list;
-
-    /*wait list to block*/
-    list_node_t wait_list;
+    list_head wait_list;
 
     /* process id */
     pid_t pid;
@@ -89,14 +87,6 @@ typedef struct pcb
 
     /* time(seconds) to wake up sleeping PCB */
     uint64_t wakeup_time;
-
-    /*mutex lock to aquire when wakeup*/
-    int mutex_idx;
-
-    /*mbox info*/
-    char* mbox_buf;
-    int mbox_size;
-    int mbox_rw;/*0:read, 1:write*/
 
 } pcb_t;
 

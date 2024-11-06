@@ -38,9 +38,4 @@ static inline int isspace(int ch)
            ch == '\v' || ch == '\f' || ch == '\r';
 }
 
-static inline int isprintable(int ch)
-{
-    return ch>=32 && ch<=126 && !isspace(ch);
-}
-
 #endif

@@ -55,9 +55,9 @@ typedef list_node_t list_head;
 /*note : API below should be used with pointer instead of struct list_node */
 #define LIST_IS_EMPTY(head) ((head)->next == (head))
 
-#define NODE_TO_PCB(node) ((pcb_t*)((reg_t)node - 4 * sizeof(reg_t)))
+#define NODE_TO_PCB(node) ((pcb_t*)((reg_t)node - 2 * sizeof(reg_t)))
 
-#define PCB_TO_NODE(pcb) ((list_node_t*)((reg_t)pcb + 4 * sizeof(reg_t)))
+#define PCB_TO_NODE(pcb) ((list_node_t*)((reg_t)pcb + 2 * sizeof(reg_t)))
 
 #define LIST_ADD_HEAD(head, node) do { \
     (node)->next = (head)->next; \

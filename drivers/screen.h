@@ -39,9 +39,6 @@ void screen_reflush(void);
 /* screen write string */
 void screen_write(char *buff);
 
-/* screen write char */
-void screen_write_ch(char c);
-
 /* move cursor int (x,y) */
 void screen_move_cursor(int x, int y);
 

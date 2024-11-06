@@ -12,22 +12,21 @@ loop1:
 	blt t0,t1,loop1
 
     /*save old return address*/
-    //addi sp,sp,-8
-    //sd ra,(sp)
+    addi sp,sp,-8
+    sd ra,(sp)
     
 
     /* TODO: [p1-task3] enter main function */
     jal main
     /* TODO: [p1-task3] finish task and return to the kernel, replace this in p3-task2! */
-    //ld ra,(sp)
-	//addi sp,sp,8
-    //ret
+    ld ra,(sp)
+	addi sp,sp,8
+    ret
 
-    call sys_exit
+
     /************************************************************/
     /* TODO: [P3] call sys_exit */
     /************************************************************/
-
 // while(1) loop, unreachable here
 loop:
     wfi

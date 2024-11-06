@@ -195,7 +195,6 @@ ENDPROC(switch_to)
 
 ENTRY(ret_from_exception)
   /* TODO: [p2-task3] restore context via provided macro and return to sepc */
-  call unlock_kernel
   RESTORE_CONTEXT
 
   //debug: detect csr registers
@@ -211,7 +210,6 @@ ENDPROC(ret_from_exception)
 
 ENTRY(exception_handler_entry)
 
-  call lock_kernel
   /* TODO: [p2-task3] save context via the provided macro */
   SAVE_CONTEXT
 
