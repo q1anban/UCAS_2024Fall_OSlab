@@ -135,17 +135,33 @@ static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
     // initialize pid0 and other pcb
-    pid0_pcb.cursor_x = 0;
-    pid0_pcb.cursor_y = 0;
-    pid0_pcb.pid = 0;
-    pid0_pcb.list.next = &pid0_pcb.list;
-    pid0_pcb.list.prev = &pid0_pcb.list;
-    pid0_pcb.status = TASK_BLOCKED;
-    pid0_pcb.wakeup_time = 0;
-    pid0_pcb.wait_list.next = &pid0_pcb.wait_list;
-    pid0_pcb.wait_list.prev = &pid0_pcb.wait_list;
-    pid0_pcb.mbox_rw = -1;
-    pid0_pcb.mutex_idx = -1;
+    pid0_pcb[0].cursor_x = 0;
+    pid0_pcb[0].cursor_y = 0;
+    pid0_pcb[0].pid = -1;//-1 means kernel process
+    pid0_pcb[0].list.next = &pid0_pcb[0].list;
+    pid0_pcb[0].list.prev = &pid0_pcb[0].list;
+    pid0_pcb[0].status = TASK_RUNNING;
+    pid0_pcb[0].wakeup_time = 0;
+    pid0_pcb[0].wait_list.next = &pid0_pcb[0].wait_list;
+    pid0_pcb[0].wait_list.prev = &pid0_pcb[0].wait_list;
+    pid0_pcb[0].mbox_rw = -1;
+    pid0_pcb[0].mutex_idx = -1;
+    pid0_pcb[0].kernel_sp = allocKernelPage(1);
+
+    pid0_pcb[1].cursor_x = 0;
+    pid0_pcb[1].cursor_y = 0;
+    pid0_pcb[1].pid = -1;// -1 mearns kernel process
+    pid0_pcb[1].list.next = &pid0_pcb[1].list;
+    pid0_pcb[1].list.prev = &pid0_pcb[1].list;
+    pid0_pcb[1].status = TASK_RUNNING;
+    pid0_pcb[1].wakeup_time = 0;
+    pid0_pcb[1].wait_list.next = &pid0_pcb[1].wait_list;
+    pid0_pcb[1].wait_list.prev = &pid0_pcb[1].wait_list;
+    pid0_pcb[1].mbox_rw = -1;
+    pid0_pcb[1].mutex_idx = -1;
+    pid0_pcb[1].kernel_sp  =allocKernelPage(1);
+
+    // initialize other pcb
     for (int i = 0; i < NUM_MAX_TASK; i++)
     {
         pcb[i].pid = i;
@@ -162,7 +178,7 @@ static void init_pcb(void)
     }
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
-    current_running = &pid0_pcb;
+    current_running = &pid0_pcb[0];//only CPU 0 will excute this function
 }
 
 static void init_syscall(void)
@@ -218,11 +234,8 @@ void test()
 
 int main(void)
 {
-    if (get_current_cpu_id() == 0) //
+    if (get_current_cpu_id() == 0) //CPU 0 entry here
     {        
-        //lock kernel  (灬╹ω╹灬)                    
-        lock_kernel();
-
         // Init jump table provided by kernel and bios(ΦωΦ)
         init_jmptab();
 
@@ -264,19 +277,41 @@ int main(void)
         // Init mailbox ( ๑͒･(ｴ)･๑͒)
         init_mbox();
         printk("> [INIT] Mailbox initialization succeeded.\n");
-
-        send_ipi(0);
         
+        // Init Shell
+        test();
+        printk("> [INIT] Task initialization succeeded.\n");
+
+        // Wake up CPU 1
+        wakeup_other_hart();
+        printk("> [INIT] Waking up CPU 1.\n");
+
+        // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
+        //   and then execute them.
+
+        // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
+        // NOTE: The function of sstatus.sie is different from sie's
+        set_timer(get_ticks() + TIMER_INTERVAL);
+        // do_scheduler();
+        // ret_from_exception();
+        // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
+        while (1)
+        {
+            // If you do non-preemptive scheduling, it's used to surrender control
+
+            // do_scheduler();
+            // ret_from_exception();
+            // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
+            enable_preempt();
+            asm volatile("wfi");
+        }
     }
     else
     {
         // second cpu starts here
-
-        current_running = &pid0_pcb;
-        init_exception();
-        lock_kernel();
-        bios_set_timer(get_ticks() + TIMER_INTERVAL);
-        unlock_kernel();
+        current_running = &pid0_pcb[1];
+        setup_exception();
+        set_timer(get_ticks() + TIMER_INTERVAL);
         enable_interrupt();
         while(1){
             enable_preempt();
@@ -285,26 +320,6 @@ int main(void)
 
     }
 
-    // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
-    //   and then execute them.
-    test();
-    printk("> [INIT] Task initialization succeeded.\n");
-    // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
-    // NOTE: The function of sstatus.sie is different from sie's
-    set_timer(get_ticks() + TIMER_INTERVAL);
-    unlock_kernel();
-    // do_scheduler();
-    // ret_from_exception();
-    // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
-    while (1)
-    {
-        // If you do non-preemptive scheduling, it's used to surrender control
-
-        // do_scheduler();
-        // ret_from_exception();
-        // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
-        enable_preempt();
-        asm volatile("wfi");
-    }
+    
     return 0;
 }

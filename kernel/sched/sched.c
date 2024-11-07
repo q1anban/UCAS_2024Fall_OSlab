@@ -15,11 +15,7 @@
 
 pcb_t pcb[NUM_MAX_TASK];
 const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
-pcb_t pid0_pcb = {
-    .pid = 0,
-    .kernel_sp = (ptr_t)pid0_stack,
-    .user_sp = (ptr_t)pid0_stack
-};
+pcb_t pid0_pcb[2] ;
 
 LIST_HEAD(ready_queue);
 LIST_HEAD(sleep_queue);

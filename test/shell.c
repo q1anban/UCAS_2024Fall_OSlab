@@ -149,10 +149,6 @@ void parse()
     {
         printf("Error:Unknown command %s!\n", buf+command_start);//no need for \n
     }
-    
-    
-
-
     //clear buf after parse
     i=0;
 }

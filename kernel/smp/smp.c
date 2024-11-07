@@ -12,6 +12,8 @@ void smp_init()
 void wakeup_other_hart()
 {
     /* TODO: P3-TASK3 multicore*/
+    const unsigned long mask = 2;
+    send_ipi(&mask); 
 }
 
 int locked=0;
@@ -19,8 +21,9 @@ int locked=0;
 void lock_kernel()
 {
     /* TODO: P3-TASK3 multicore*/
-    while(atomic_swap(1,&locked))
+    while (atomic_swap(1,&locked))
         ;
+    
 }
 
 void unlock_kernel()
