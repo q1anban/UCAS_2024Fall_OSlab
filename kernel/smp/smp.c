@@ -29,5 +29,5 @@ void lock_kernel()
 void unlock_kernel()
 {
     /* TODO: P3-TASK3 multicore*/
-    locked=0;
+    atomic_swap(0,&locked);
 }
