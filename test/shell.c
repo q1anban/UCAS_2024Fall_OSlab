@@ -126,11 +126,15 @@ void parse()
         }
         int pid ;
         if((pid =sys_exec(name, argc, argv))!=-1) 
+        {
             printf("Info:Process %s created, pid: %d\n", name, pid);
-
-        if(wait_flag)
+            if(wait_flag)
             sys_waitpid(pid);
 
+        }
+        else
+            printf("Error:Failed to create process %s!\n", name);
+        
     }
     else if (strcmp(buf+command_start, "kill") == 0)
     {
