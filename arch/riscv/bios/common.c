@@ -33,6 +33,20 @@ int sd_read(unsigned mem_address, unsigned num_of_blocks, unsigned block_id)
                             (long)num_of_blocks, (long)block_id, IGNORE, IGNORE);
 }
 
+int sd_read_more(unsigned mem_address, unsigned num_of_blocks, unsigned block_id)
+{
+    //notice that mem_address is pa
+    int num = 0;
+    while(num_of_blocks > 64 )
+    {
+        num += sd_read(mem_address, 64, block_id);
+        mem_address += 64 * 512;
+        num_of_blocks -= 64;
+        block_id+=64;
+    }
+    return num + sd_read(mem_address, num_of_blocks, block_id);
+}
+
 int sd_write(unsigned mem_address, unsigned num_of_blocks, unsigned block_id)
 {
     return (int)call_bios((long)BIOS_SDWRITE, (long)mem_address, \

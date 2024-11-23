@@ -34,6 +34,9 @@
 
 #define NUM_MAX_TASK 16
 
+#define ASID_KERNEL 0x10
+#define ASID_USER 0xf0
+
 /* used to save register infomation */
 typedef struct regs_context
 {
@@ -98,6 +101,8 @@ typedef struct pcb
     int mbox_size;
     int mbox_rw;/*0:read, 1:write*/
 
+    uint64_t satp;
+    unsigned asid;
 } pcb_t;
 
 /* ready queue to run */

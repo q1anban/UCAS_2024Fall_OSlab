@@ -48,7 +48,7 @@ static void ARRTIBUTE_BOOTKERNEL enable_vm()
  */
 static void ARRTIBUTE_BOOTKERNEL setup_vm()
 {
-    clear_pgdir(PGDIR_PA);
+    clear_pgdir(PGDIR_PA);  
     // map kernel virtual address(kva) to kernel physical
     // address(kpa) kva = kpa + 0xffff_ffc0_0000_0000 use 2MB page,
     // map all physical memory
@@ -77,7 +77,7 @@ int ARRTIBUTE_BOOTKERNEL boot_kernel(unsigned long mhartid)
     }
 
     /* enter kernel */
-    ((kernel_entry_t)pa2kva(_start))(mhartid);
+    ((kernel_entry_t)pa2kva((uintptr_t)_start))(mhartid);
 
     return 0;
 }

@@ -13,6 +13,7 @@
 #include <os/string.h>
 
 
+
 pcb_t pcb[NUM_MAX_TASK];
 const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
 pcb_t pid0_pcb[2] ;
@@ -49,6 +50,11 @@ void do_scheduler(void)
             LIST_ADD_TAIL(&ready_queue, &current_running->list);
             current_running->status = TASK_READY;
         }
+    }
+    if(next_pcb!= current_running)
+    {
+        set_satp(SATP_MODE_SV39,next_pcb->asid,next_pcb->satp>>NORMAL_PAGE_SHIFT);
+        local_flush_tlb_all();
     }
 
     current_running = next_pcb;
@@ -98,9 +104,9 @@ pid_t do_exec(char *name, int argc, char *argv[])
                 if(pcb[j].status == TASK_EXITED)//find an empty pcb
                 {
                     //initialize the pcb
-                    reg_t user_stack = allocUserPage(1);
-                    reg_t kernel_stack = allocKernelPage(1);
-                    reg_t entry_point = load_task_img(i);
+                    reg_t user_stack = allocPage(1,pcb[j].asid);
+                    reg_t kernel_stack = allocPage(1,pcb[j].asid);
+                    reg_t entry_point; //= load_task_img(i)
                     regs_context_t *pt_regs =(regs_context_t *)(kernel_stack - sizeof(regs_context_t));
                     for(int i=0;i<32;i++)
                     {

@@ -26,7 +26,8 @@
 typedef struct {
     char name[32];
     int offset;
-    int size;
+    int file_size;
+    int mem_size;
 } task_info_t;
 
 #define TASK_MAXNUM 16
@@ -114,6 +115,9 @@ static void create_image(int nfiles, char *files[])
         {
             strcpy(taskinfo[taskidx].name,*files);
             taskinfo[taskidx].offset    = phyaddr;
+            taskinfo[taskidx].file_size = 0;
+            taskinfo[taskidx].mem_size  = 0;//init mem_size to 0
+        
         }
 
 
@@ -139,7 +143,8 @@ static void create_image(int nfiles, char *files[])
             }
             else if(fidx>0){
                 //not bootload and not main
-                taskinfo[taskidx].size  = phyaddr- taskinfo[taskidx].offset;
+                taskinfo[taskidx].file_size  = phyaddr- taskinfo[taskidx].offset;
+                taskinfo[taskidx].mem_size   += get_memsz(phdr);
             }
         }
 
@@ -248,7 +253,8 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
     {
         fwrite(taskinfo[i].name,sizeof(char),32,img);
         fwrite(&taskinfo[i].offset,sizeof(int),1,img);
-        fwrite(&taskinfo[i].size,sizeof(int),1,img);
+        fwrite(&taskinfo[i].file_size,sizeof(int),1,img);
+        fwrite(&taskinfo[i].mem_size,sizeof(int),1,img);
     }
     //store tasknum
     fseek(img,TASK_NUM_LOC,SEEK_SET);

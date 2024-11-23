@@ -221,6 +221,10 @@ ENTRY(exception_handler_entry)
    */
   la ra, ret_from_exception
 
+  //set SR_SUM to enable kernel mode to access user memory
+  li t0, SR_SUM
+  csrs CSR_SSTATUS, t0
+
   /* TODO: [p2-task3] call interrupt_helper
    * NOTE: don't forget to pass parameters for it.
    */

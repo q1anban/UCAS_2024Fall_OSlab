@@ -15,7 +15,7 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
     // TODO: [p2-task3] & [p2-task4] interrupt handler.
     // call corresponding handler by the value of `scause`
     //now ra is ret from exception
-    uint64_t flag = 1<<63;
+    uint64_t flag = 1lu<<63;
     uint32_t is_irq = scause >>63; 
     uint64_t cause = scause & ~flag;
     if(is_irq) //irq

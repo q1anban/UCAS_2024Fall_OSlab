@@ -67,6 +67,8 @@ static inline void set_satp(
 
 #define VA_MASK ((1lu << 39) - 1)
 
+#define PTE_MASK ((1lu<<54)-1)
+
 #define PPN_BITS 9lu
 #define NUM_PTE_ENTRY (1 << PPN_BITS)
 
@@ -76,42 +78,74 @@ typedef uint64_t PTE;
 static inline uintptr_t kva2pa(uintptr_t kva)
 {
     /* TODO: [P4-task1] */
+    return kva & 0xffffffff;
 }
 
 static inline uintptr_t pa2kva(uintptr_t pa)
 {
     /* TODO: [P4-task1] */
-}
-
-/* get physical page addr from PTE 'entry' */
-static inline uint64_t get_pa(PTE entry)
-{
-    /* TODO: [P4-task1] */
+    return pa | 0xffffffc000000000lu;
 }
 
 /* Get/Set page frame number of the `entry` */
 static inline long get_pfn(PTE entry)
 {
     /* TODO: [P4-task1] */
+    return (entry & PTE_MASK) >> _PAGE_PFN_SHIFT;
 }
 static inline void set_pfn(PTE *entry, uint64_t pfn)
 {
     /* TODO: [P4-task1] */
+    *entry |= (pfn << _PAGE_PFN_SHIFT) & PTE_MASK;
 }
+
+
+/* get physical page addr from PTE 'entry' */
+static inline uint64_t get_pa(PTE entry)
+{
+    /* TODO: [P4-task1] */
+    return (get_pfn(entry) << NORMAL_PAGE_SHIFT);
+}
+
 
 /* Get/Set attribute(s) of the `entry` */
 static inline long get_attribute(PTE entry, uint64_t mask)
 {
     /* TODO: [P4-task1] */
+    return entry & mask;
 }
 static inline void set_attribute(PTE *entry, uint64_t bits)
 {
     /* TODO: [P4-task1] */
+    *entry |= bits;
 }
 
 static inline void clear_pgdir(uintptr_t pgdir_addr)
 {
     /* TODO: [P4-task1] */
+    int num = NORMAL_PAGE_SIZE / sizeof(uint64_t);
+    uint64_t* p = (uint64_t*)pgdir_addr;
+    for(int i=0; i<num ; i++)
+    {
+        *p = 0;
+        p++;
+    }
 }
+
+static inline uint64_t get_vpn2(uint64_t vaddr)
+{
+    return (vaddr & VA_MASK)>>(NORMAL_PAGE_SHIFT+PPN_BITS+PPN_BITS);
+}
+
+static inline uint64_t get_vpn1(uint64_t vaddr)
+{
+    return ((vaddr&VA_MASK)>>(NORMAL_PAGE_SHIFT+PPN_BITS))&((1lu<<(PPN_BITS+1))-1);
+}
+
+static inline uint64_t get_vpn0(uint64_t vaddr)
+{
+    return ((vaddr & VA_MASK) >> (NORMAL_PAGE_SHIFT))&((1lu << (PPN_BITS + 1)) - 1);
+}
+
 
 #endif  // PGTABLE_H

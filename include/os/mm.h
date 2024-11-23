@@ -36,13 +36,21 @@
 #define INIT_KERNEL_STACK 0xffffffc052000000
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK+PAGE_SIZE)
 
+#define PAGE_TABLE_SIZE 4096 // 4K
+#define INIT_KERNEL_PAGETABLE 0xffffffc054000000
+#define TEMP_TASK_IMG 0xffffffc056000000 //暂时存放task内容的地址
+
 /* Rounding; only works for n = power of two */
-#define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))+PAGE_SIZE
+#define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
 #define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))
 
-extern ptr_t allocPage(int numPage);
+void init_mm();
+
+extern ptr_t allocPage(int numPage,uint8_t asid);
+extern ptr_t allocPagetable(uint8_t asid);
 // TODO [P4-task1] */
 void freePage(ptr_t baseAddr);
+void freeProcessMem(uint8_t asid);
 
 // #define S_CORE
 // NOTE: only need for S-core to alloc 2MB large page
@@ -58,7 +66,7 @@ extern ptr_t allocLargePage(int numPage);
 // TODO [P4-task1] */
 extern void* kmalloc(size_t size);
 extern void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir);
-extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir);
+extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir,uint8_t asid);
 
 // TODO [P4-task4]: shm_page_get/dt */
 uintptr_t shm_page_get(int key);

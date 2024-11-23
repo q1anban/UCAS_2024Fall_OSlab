@@ -69,6 +69,9 @@ int port_read_ch(void);
 // use bios bios_sd_read function
 int sd_read(unsigned mem_address, unsigned num_of_blocks, unsigned block_id);
 
+//read blocks from sd card
+//wrap sd_read function to read more than 64 blocks
+int sd_read_more(unsigned mem_address, unsigned num_of_blocks, unsigned block_id);
 /************************************************************/
 // write blocks to sd card
 // use bios bios_sdwrite function

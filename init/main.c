@@ -22,10 +22,12 @@ extern void ret_from_exception();
 
 #define VERSION_BUF 50
 
-#define TASK_NUM_LOC 0x502001f6
-#define TASK_INFO_OFFSET 0x502001f8
-#define KERNEL_LOC 0x50201000
-#define MYSTERIOUS_PLACE 0x52000000
+#define TASK_NUM_LOC 0x502001f6lu
+#define TASK_INFO_OFFSET 0x502001f8lu
+#define KERNEL_LOC 0x50201000lu
+#define MYSTERIOUS_PLACE 0x52000000lu
+
+#define USER_STACK 0xf00010000
 
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
@@ -33,6 +35,17 @@ char buf[VERSION_BUF];
 // Task info array
 task_info_t tasks[TASK_MAXNUM];
 int tasknum;
+
+/*
+ * Once a CPU core calls this function,
+ * it will stop executing!
+ */
+static void kernel_brake(void)
+{
+    disable_interrupt();
+    while (1)
+        __asm__ volatile("wfi");
+}
 
 static void init_jmptab(void)
 {
@@ -72,8 +85,8 @@ static void init_task_info(void)
     int start_sec = offset / SECTOR_SIZE;
     int end_sec = (offset + infosize) / SECTOR_SIZE;
     int num_sec = end_sec - start_sec + 1;
-    sd_read(MYSTERIOUS_PLACE, num_sec, start_sec);
-    char *ptr = (char *)(MYSTERIOUS_PLACE + offset % SECTOR_SIZE);
+    sd_read_more(MYSTERIOUS_PLACE, num_sec, start_sec);
+    char *ptr = (char *)pa2kva(MYSTERIOUS_PLACE + offset % SECTOR_SIZE);
     for (int i = 0; i < num; i++)
     {
         for (int j = 0; j < 32; j++)
@@ -83,15 +96,17 @@ static void init_task_info(void)
         }
         tasks[i].offset = *((int *)ptr);
         ptr += 4;
-        tasks[i].size = *((int *)ptr);
+        tasks[i].file_size = *((int *)ptr);
+        ptr += 4;
+        tasks[i].mem_size = *((int *)ptr);
         ptr += 4;
     }
 }
 
 /************************************************************/
+//kernel stack  and user stack are both kva
 static void init_pcb_stack(
-    ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
-    pcb_t *pcb)
+    ptr_t kernel_stack, ptr_t user_stack,pcb_t *pcb)
 {
     /* TODO: [p2-task3] initialization of registers on kernel stack
      * HINT: sp, ra, sepc, sstatus
@@ -104,9 +119,11 @@ static void init_pcb_stack(
     {
         pt_regs->regs[i] = 0;
     }
-    pt_regs->regs[2] = user_stack;
+    //notice : add mapping here for user stack
+    pt_regs->regs[2] = USER_STACK;
+    alloc_page_helper(USER_STACK-PAGE_SIZE,pa2kva(pcb->satp),pcb->asid);
     pt_regs->regs[4] = (reg_t)pcb;
-    pt_regs->sepc = entry_point;
+    pt_regs->sepc = 0x10000;
     pt_regs->scause = 0x0;
     pt_regs->sstatus = SR_SPIE;  // indicates that before interrupts are enabled
     pt_regs->sstatus &= ~SR_SPP; // indicates user mode
@@ -127,7 +144,7 @@ static void init_pcb_stack(
     pt_switchto->regs[0] = entry_point;//ra
     pt_switchto->regs[1] = user_stack;//sp
     */
-    pcb->user_sp = user_stack;
+    pcb->user_sp = USER_STACK;
     pcb->kernel_sp = (ptr_t)pt_regs;
 }
 
@@ -135,6 +152,7 @@ static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
     // initialize pid0 and other pcb
+    pid0_pcb[0].asid = ASID_KERNEL|0;
     pid0_pcb[0].cursor_x = 0;
     pid0_pcb[0].cursor_y = 0;
     pid0_pcb[0].pid = -1;//-1 means kernel process
@@ -146,8 +164,10 @@ static void init_pcb(void)
     pid0_pcb[0].wait_list.prev = &pid0_pcb[0].wait_list;
     pid0_pcb[0].mbox_rw = -1;
     pid0_pcb[0].mutex_idx = -1;
-    pid0_pcb[0].kernel_sp = allocKernelPage(1);
+    pid0_pcb[0].kernel_sp = allocPage(1,pid0_pcb[0].asid)+PAGE_SIZE;//notice that sp is the top of the page
+    pid0_pcb[0].satp = PGDIR_PA;
 
+    pid0_pcb[1].asid = ASID_KERNEL|1;
     pid0_pcb[1].cursor_x = 0;
     pid0_pcb[1].cursor_y = 0;
     pid0_pcb[1].pid = -1;// -1 mearns kernel process
@@ -159,7 +179,9 @@ static void init_pcb(void)
     pid0_pcb[1].wait_list.prev = &pid0_pcb[1].wait_list;
     pid0_pcb[1].mbox_rw = -1;
     pid0_pcb[1].mutex_idx = -1;
-    pid0_pcb[1].kernel_sp  =allocKernelPage(1);
+    pid0_pcb[1].kernel_sp  =allocPage(1,pid0_pcb[1].asid)+PAGE_SIZE;
+    pid0_pcb[1].satp = PGDIR_PA;
+    
 
     // initialize other pcb
     for (int i = 0; i < NUM_MAX_TASK; i++)
@@ -175,10 +197,24 @@ static void init_pcb(void)
         pcb[i].wait_list.prev = &pcb[i].wait_list;
         pcb[i].mbox_rw = -1;
         pcb[i].mutex_idx = -1;
+        pcb[i].asid = ASID_USER|i;
     }
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
     current_running = &pid0_pcb[0];//only CPU 0 will excute this function
+}
+
+static void clean_temp_page(void)
+{
+    //clean up temporary page that maps 0x50000000-0x51000000 to themselves
+    
+    uint64_t *pgaddr = (uint64_t *)pa2kva(PGDIR_PA);
+    uint64_t* second_pgaddr = (uint64_t*)pa2kva(get_pa(pgaddr[get_vpn2(0x50000000lu)]));//find the second page table
+    for (uint64_t pa = 0x50000000lu; pa < 0x51000000lu;
+         pa += 0x200000lu) 
+    {
+        second_pgaddr[get_vpn1(pa)]=0;
+    }
 }
 
 static void init_syscall(void)
@@ -192,7 +228,7 @@ static void init_syscall(void)
     syscall[SYSCALL_PS] = do_process_show;
     syscall[SYSCALL_GETPID] = do_getpid;
     syscall[SYSCALL_YIELD] = do_scheduler;
-    syscall[SYSCALL_WRITE] = screen_write; //?
+    syscall[SYSCALL_WRITE] = screen_write; 
     syscall[SYSCALL_READCH] = port_read_ch;
     syscall[SYSCALL_CURSOR] = screen_move_cursor;
     syscall[SYSCALL_REFLUSH] = screen_reflush;
@@ -218,15 +254,15 @@ static void init_syscall(void)
 
 void test()
 {
-    char *str1 = "shell";
-    reg_t entry;
+    char *str1 = "fly";
     for (int i = 0; i < tasknum; i++)
     {
         if (strcmp(str1, tasks[i].name) == 0)
         {
-            entry = load_task_img(i);
-            init_pcb_stack(allocKernelPage(1), allocUserPage(1), entry, &pcb[0]);
+            
             pcb[0].status = TASK_READY;
+            pcb[0].satp = load_task_img(i,pcb[0].asid);
+            init_pcb_stack(allocPage(1,pcb[0].asid)+PAGE_SIZE, allocPage(1,pcb[0].asid)+PAGE_SIZE,&pcb[0]);//kernel sp and user sp using both kva
             LIST_ADD_TAIL(&ready_queue, &pcb[0].list);
         }
     }
@@ -285,13 +321,14 @@ int main(void)
         // Wake up CPU 1
         wakeup_other_hart();
         printk("> [INIT] Waking up CPU 1.\n");
-
+        
         // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
         //   and then execute them.
 
         // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
         // NOTE: The function of sstatus.sie is different from sie's
         set_timer(get_ticks() + TIMER_INTERVAL);
+        clean_temp_page();
         // do_scheduler();
         // ret_from_exception();
         // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)

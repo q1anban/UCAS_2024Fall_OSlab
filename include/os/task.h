@@ -15,7 +15,8 @@
 typedef struct {
     char name[32];
     int offset;
-    int size;
+    int file_size;
+    int mem_size;
 } task_info_t;
 
 extern task_info_t tasks[TASK_MAXNUM];
