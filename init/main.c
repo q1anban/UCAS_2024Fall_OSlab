@@ -254,7 +254,7 @@ static void init_syscall(void)
 
 void test()
 {
-    char *str1 = "fly";
+    char *str1 = "shell";
     for (int i = 0; i < tasknum; i++)
     {
         if (strcmp(str1, tasks[i].name) == 0)

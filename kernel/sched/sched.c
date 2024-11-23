@@ -104,16 +104,20 @@ pid_t do_exec(char *name, int argc, char *argv[])
                 if(pcb[j].status == TASK_EXITED)//find an empty pcb
                 {
                     //initialize the pcb
-                    reg_t user_stack = allocPage(1,pcb[j].asid);
-                    reg_t kernel_stack = allocPage(1,pcb[j].asid);
-                    reg_t entry_point; //= load_task_img(i)
+                    //init page table
+                    pcb[j].satp = load_task_img(i,pcb[j].asid);//page table
+                    //map USER_STACK_ADDR-PAGE_SIZE ~ USER_STACK_ADDR to user stack
+                    reg_t real_user_sp = alloc_page_helper(USER_STACK_ADDR-PAGE_SIZE,pa2kva(pcb[j].satp),pcb[j].asid);
+                    //"user_stack" in kernel
+                    reg_t user_stack = real_user_sp + PAGE_SIZE;
+                    reg_t kernel_stack = allocPage(1,pcb[j].asid)+PAGE_SIZE;
                     regs_context_t *pt_regs =(regs_context_t *)(kernel_stack - sizeof(regs_context_t));
                     for(int i=0;i<32;i++)
                     {
                         pt_regs->regs[i]=0;
                     }
 
-                    reg_t space=0;
+                    reg_t space=0;//for arguments
                     reg_t pointers=user_stack- argc*sizeof(char*);
                     
                     //prepare space for arguments
@@ -127,16 +131,17 @@ pid_t do_exec(char *name, int argc, char *argv[])
                     {
                         strcpy((char*)(arg_pointer),argv[k]);
                         *((char**)(pointers)) = (char*)(arg_pointer);
-                        pointers+=sizeof(char*);
+                        
                         arg_pointer+=strlen(argv[k])+1;//point to space for the next string
+                        pointers+=sizeof(char*);
                     }
                     
                     user_stack = ROUNDDOWN(user_stack,128);//align
-                    pt_regs->regs[2]=user_stack;
+                    pt_regs->regs[2]=USER_STACK_ADDR+user_stack-real_user_sp-PAGE_SIZE;
                     pt_regs->regs[4]=(reg_t)&pcb[j];
                     pt_regs->regs[10]= argc;
                     pt_regs->regs[11]= arg_pointer;
-                    pt_regs->sepc = entry_point;
+                    pt_regs->sepc = 0x10000;
                     pt_regs->scause = 0x0;
                     pt_regs->sstatus = SR_SPIE;//indicates that before interrupts are enabled
                     pt_regs->sstatus&=~SR_SPP;//indicates user mode
@@ -169,6 +174,8 @@ int do_kill(pid_t pid)
     LIST_REMOVE(&pcb[pid].list);
     //release its lock
     do_release_locks(pid);
+    //free page table and page it used
+    freeProcessMem(pcb[pid].asid);
     //wake its waiters
     while(!LIST_IS_EMPTY(&pcb[pid].wait_list))
     {
