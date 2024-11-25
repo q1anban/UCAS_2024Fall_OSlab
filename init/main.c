@@ -121,7 +121,7 @@ static void init_pcb_stack(
     }
     //notice : add mapping here for user stack
     pt_regs->regs[2] = USER_STACK;
-    alloc_page_helper(USER_STACK-PAGE_SIZE,pa2kva(pcb->satp),pcb->asid);
+    //alloc_page_helper(USER_STACK-PAGE_SIZE,pa2kva(pcb->satp),pcb->asid);
     pt_regs->regs[4] = (reg_t)pcb;
     pt_regs->sepc = 0x10000;
     pt_regs->scause = 0x0;
@@ -164,7 +164,7 @@ static void init_pcb(void)
     pid0_pcb[0].wait_list.prev = &pid0_pcb[0].wait_list;
     pid0_pcb[0].mbox_rw = -1;
     pid0_pcb[0].mutex_idx = -1;
-    pid0_pcb[0].kernel_sp = allocPage(1,pid0_pcb[0].asid)+PAGE_SIZE;//notice that sp is the top of the page
+    pid0_pcb[0].kernel_sp = allocPage(pid0_pcb[0].asid)+PAGE_SIZE;//notice that sp is the top of the page
     pid0_pcb[0].satp = PGDIR_PA;
 
     pid0_pcb[1].asid = ASID_KERNEL|1;
@@ -179,7 +179,7 @@ static void init_pcb(void)
     pid0_pcb[1].wait_list.prev = &pid0_pcb[1].wait_list;
     pid0_pcb[1].mbox_rw = -1;
     pid0_pcb[1].mutex_idx = -1;
-    pid0_pcb[1].kernel_sp  =allocPage(1,pid0_pcb[1].asid)+PAGE_SIZE;
+    pid0_pcb[1].kernel_sp  =allocPage(pid0_pcb[1].asid)+PAGE_SIZE;
     pid0_pcb[1].satp = PGDIR_PA;
     
 
@@ -262,7 +262,7 @@ void test()
             
             pcb[0].status = TASK_READY;
             pcb[0].satp = load_task_img(i,pcb[0].asid);
-            init_pcb_stack(allocPage(1,pcb[0].asid)+PAGE_SIZE, allocPage(1,pcb[0].asid)+PAGE_SIZE,&pcb[0]);//kernel sp and user sp using both kva
+            init_pcb_stack(allocPage(pcb[0].asid)+PAGE_SIZE, allocPage(pcb[0].asid)+PAGE_SIZE,&pcb[0]);//kernel sp and user sp using both kva
             LIST_ADD_TAIL(&ready_queue, &pcb[0].list);
         }
     }

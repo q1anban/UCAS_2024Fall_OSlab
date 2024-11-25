@@ -51,10 +51,12 @@ void do_scheduler(void)
             current_running->status = TASK_READY;
         }
     }
-    if(next_pcb!= current_running)
+    if(next_pcb->asid!= current_running->asid)
     {
         set_satp(SATP_MODE_SV39,next_pcb->asid,next_pcb->satp>>NORMAL_PAGE_SHIFT);
         local_flush_tlb_all();
+        if(current_running->status == TASK_EXITED)
+            freeProcessMem(current_running->asid);
     }
 
     current_running = next_pcb;
@@ -109,8 +111,14 @@ pid_t do_exec(char *name, int argc, char *argv[])
                     //map USER_STACK_ADDR-PAGE_SIZE ~ USER_STACK_ADDR to user stack
                     reg_t real_user_sp = alloc_page_helper(USER_STACK_ADDR-PAGE_SIZE,pa2kva(pcb[j].satp),pcb[j].asid);
                     //"user_stack" in kernel
+                    //user_stack    ------ >  USER_STACK_ADDR
+                    //
+                    //
+                    //
+                    //real_user_sp  ----- >   USER_STACK_ADDR - PAGE_SIZE 
                     reg_t user_stack = real_user_sp + PAGE_SIZE;
-                    reg_t kernel_stack = allocPage(1,pcb[j].asid)+PAGE_SIZE;
+                    reg_t kva2uva = user_stack-USER_STACK_ADDR ;//to turn kva to uva need to add - kva2uva
+                    reg_t kernel_stack = allocPage(pcb[j].asid)+PAGE_SIZE;
                     regs_context_t *pt_regs =(regs_context_t *)(kernel_stack - sizeof(regs_context_t));
                     for(int i=0;i<32;i++)
                     {
@@ -119,7 +127,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
 
                     reg_t space=0;//for arguments
                     reg_t pointers=user_stack- argc*sizeof(char*);
-                    
+                    //notice: now we have to transfer all the kva to uva
                     //prepare space for arguments
                     for(int k=0;k<argc;k++)
                     {
@@ -130,7 +138,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
                     for(int k=0;k<argc;k++)
                     {
                         strcpy((char*)(arg_pointer),argv[k]);
-                        *((char**)(pointers)) = (char*)(arg_pointer);
+                        *((char**)(pointers)) = (char*)(arg_pointer-kva2uva);
                         
                         arg_pointer+=strlen(argv[k])+1;//point to space for the next string
                         pointers+=sizeof(char*);
@@ -140,7 +148,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
                     pt_regs->regs[2]=USER_STACK_ADDR+user_stack-real_user_sp-PAGE_SIZE;
                     pt_regs->regs[4]=(reg_t)&pcb[j];
                     pt_regs->regs[10]= argc;
-                    pt_regs->regs[11]= arg_pointer;
+                    pt_regs->regs[11]= user_stack-kva2uva;
                     pt_regs->sepc = 0x10000;
                     pt_regs->scause = 0x0;
                     pt_regs->sstatus = SR_SPIE;//indicates that before interrupts are enabled
@@ -174,8 +182,6 @@ int do_kill(pid_t pid)
     LIST_REMOVE(&pcb[pid].list);
     //release its lock
     do_release_locks(pid);
-    //free page table and page it used
-    freeProcessMem(pcb[pid].asid);
     //wake its waiters
     while(!LIST_IS_EMPTY(&pcb[pid].wait_list))
     {

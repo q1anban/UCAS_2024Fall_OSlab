@@ -46,7 +46,7 @@
 
 void init_mm();
 
-extern ptr_t allocPage(int numPage,uint8_t asid);
+extern ptr_t allocPage(uint8_t asid);
 extern ptr_t allocPagetable(uint8_t asid);
 // TODO [P4-task1] */
 void freePage(ptr_t baseAddr);
@@ -72,6 +72,9 @@ extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir,uint8_t asid);
 uintptr_t shm_page_get(int key);
 void shm_page_dt(uintptr_t addr);
 
-
+reg_t page_in_swap(reg_t va,reg_t asid);
+//pgdir in pa
+//return PTE if page is in mem, 0 otherwise
+reg_t page_in_mem(reg_t va,reg_t pgdir);
 
 #endif /* MM_H */

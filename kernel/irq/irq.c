@@ -3,6 +3,7 @@
 #include <os/sched.h>
 #include <os/string.h>
 #include <os/kernel.h>
+#include<os/mm.h>
 #include <printk.h>
 #include <assert.h>
 #include <screen.h>
@@ -37,6 +38,47 @@ void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
     do_scheduler();
 }
 
+void handle_load_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause)
+{
+    reg_t kva = page_in_mem(stval,current_running->satp);
+    if(kva!=0)//in memory
+    {
+        set_attribute((PTE*)kva,_PAGE_ACCESSED);
+    }else
+    {
+        if(page_in_swap(stval,current_running->asid))//in swap
+        {
+
+
+        }else
+        {
+            //not in memory and not in swap
+            alloc_page_helper(stval,pa2kva(current_running->satp),current_running->asid);
+        }
+    }
+    
+}
+
+void handle_store_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause)
+{
+    reg_t kva = page_in_mem(stval,current_running->satp);
+    if(kva!=0)//in memory
+    {
+        set_attribute((PTE*)kva,_PAGE_ACCESSED|_PAGE_DIRTY);
+    }else
+    {
+        if(page_in_swap(stval,current_running->asid))//in swap
+        {
+            
+
+        }else
+        {
+            //not in memory and not in swap
+            alloc_page_helper(stval,pa2kva(current_running->satp),current_running->asid);
+        }
+    }
+}
+
 void init_exception()
 {
     /* TODO: [p2-task3] initialize exc_table */
@@ -48,8 +90,8 @@ void init_exception()
     exc_table[EXCC_LOAD_ACCESS]=handle_other;
     exc_table[EXCC_STORE_ACCESS]=handle_other;
     exc_table[EXCC_INST_PAGE_FAULT]=handle_other;
-    exc_table[EXCC_LOAD_PAGE_FAULT]=handle_other;
-    exc_table[EXCC_STORE_PAGE_FAULT]=handle_other;
+    exc_table[EXCC_LOAD_PAGE_FAULT]=handle_load_page_fault;
+    exc_table[EXCC_STORE_PAGE_FAULT]=handle_store_page_fault;
     /* TODO: [p2-task4] initialize irq_table */
     /* NOTE: handle_int, handle_other, etc.*/
     irq_table[IRQC_U_TIMER] = handle_other;

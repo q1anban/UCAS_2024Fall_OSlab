@@ -14,10 +14,17 @@ uint8_t free_pgt_map[PGT_PAGE_NUM];
 int mem_ptr=0;
 int pgt_ptr=0;
 //restriced function used to implement clock algorithm
-static inline int mod(int a,int b)
+
+static inline void clean_page(uint64_t* page)
 {
-    return a<b?a:0;
+    int num = PAGE_SIZE / sizeof(uint64_t);
+    for(int i=0;i<num;i++)
+    {
+        *page = 0;
+        page++;
+    }
 }
+
 
 void init_mm()
 {
@@ -28,33 +35,23 @@ void init_mm()
         free_pgt_map[i] = 0;
 }
 
-ptr_t allocPage(int numPage,uint8_t asid)
+
+
+ptr_t allocPage(uint8_t asid)
 {
-    for(int i=0;i<MEM_PAGE_NUM-numPage+1;i++)
+    for(int i=0;i<MEM_PAGE_NUM;i++)
     {
-        for(int j=0;j<numPage;j++)
+        
+        if(free_mem_map[i]==0)
         {
-            //find numPage consecutive free pages
-            if(free_mem_map[i+j]!=0)
-            {
-                i+=j;
-                break;
-            }
-            else if(j==numPage-1)
-            {
-                for(int k=0;k<numPage;k++)
-                {
-                    free_mem_map[i+k] = asid;
-                }
-                //clear the memory
-                ptr_t ret = INIT_KERNEL_STACK + i * PAGE_SIZE;
-                for(uint64_t k=ret;k< (ret + numPage * PAGE_SIZE);k+=sizeof(uint64_t))//k is the address
-                    *((uint64_t*)k) = 0;//clear the giving page
-                return ret;
-            }
-                
+            free_mem_map[i] = asid;
+            //clear the memory
+            ptr_t ret = INIT_KERNEL_STACK + i * PAGE_SIZE;
+            clean_page((uint64_t*)ret);
+            return ret;       
         }
     }
+    //no more free memory ,swap out some page
     return 0;
 }
 
@@ -66,11 +63,15 @@ ptr_t allocPagetable(uint8_t asid)
         {
             free_pgt_map[i] = asid;
             reg_t ret = INIT_KERNEL_PAGETABLE + i * PAGE_SIZE;
-            for(uint64_t i = ret; i <kernPgTCurr;i+=sizeof(uint64_t))
-                *((uint64_t*)i) = 0;
+            clean_page((uint64_t*)ret);
             return ret;
         }
     }
+    return 0;
+}
+
+reg_t page_in_swap(reg_t va,reg_t asid)
+{
     return 0;
 }
 
@@ -85,6 +86,8 @@ ptr_t allocLargePage(int numPage)
     return ret;    
 }
 #endif
+
+
 
 void freePage(ptr_t baseAddr)
 {
@@ -106,9 +109,11 @@ void freeProcessMem(uint8_t asid)
         if(free_pgt_map[i]==asid)
         {
             free_pgt_map[i] = 0;
+            clean_page((uint64_t*)(INIT_KERNEL_PAGETABLE + i * PAGE_SIZE));
         }
     }
 }
+
 
 void *kmalloc(size_t size)
 {
@@ -141,7 +146,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir,uint8_t asid)
 {
     // TODO [P4-task1] alloc_page_helper:
     va &= VA_MASK;
-    uintptr_t kva = allocPage(1,asid);
+    uintptr_t kva = allocPage(asid);
     // map the page into pgdir
     uint64_t vpn2 = get_vpn2(va);
     PTE* pgd0 = (PTE*)pgdir;
@@ -164,6 +169,24 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir,uint8_t asid)
     set_pfn(&pgd2[vpn0],kva2pa(kva)>>NORMAL_PAGE_SHIFT);
     set_attribute(&pgd2[vpn0],_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_USER);
     return kva;
+}
+
+reg_t page_in_mem(reg_t va,reg_t pgdir)
+{
+    //pgdir is pa
+    PTE* pgd0 = (PTE*)pa2kva(pgdir);
+    int vpn2 = get_vpn2(va);
+    int vpn1 = get_vpn1(va);
+    int vpn0 = get_vpn0(va);
+    if(get_attribute(pgd0[vpn2],_PAGE_PRESENT)==0)
+        return 0;
+    PTE* pgd1 = (PTE*)pa2kva(get_pa(pgd0[vpn2]));
+    if(get_attribute(pgd1[vpn1],_PAGE_PRESENT)==0)
+        return 0;
+    PTE* pgd2 = (PTE*)pa2kva(get_pa(pgd1[vpn1]));
+    if(get_attribute(pgd2[vpn0],_PAGE_PRESENT)==0)
+        return 0;
+    return (reg_t)pgd2 + sizeof(PTE)*vpn0;
 }
 
 uintptr_t shm_page_get(int key)
