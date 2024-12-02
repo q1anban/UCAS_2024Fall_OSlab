@@ -107,6 +107,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
                 {
                     //initialize the pcb
                     //init page table
+                    pcb[j].asid = ASID_USER|j;
                     pcb[j].satp = load_task_img(i,pcb[j].asid);//page table
                     //map USER_STACK_ADDR-PAGE_SIZE ~ USER_STACK_ADDR to user stack
                     reg_t real_user_sp = alloc_page_helper(USER_STACK_ADDR-PAGE_SIZE,pa2kva(pcb[j].satp),pcb[j].asid);
@@ -118,7 +119,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
                     //real_user_sp  ----- >   USER_STACK_ADDR - PAGE_SIZE 
                     reg_t user_stack = real_user_sp + PAGE_SIZE;
                     reg_t kva2uva = user_stack-USER_STACK_ADDR ;//to turn kva to uva need to add - kva2uva
-                    reg_t kernel_stack = allocPage(pcb[j].asid)+PAGE_SIZE;
+                    reg_t kernel_stack = allocPage(pcb[j].asid|KERNEL_PAGE)+PAGE_SIZE;
                     regs_context_t *pt_regs =(regs_context_t *)(kernel_stack - sizeof(regs_context_t));
                     for(int i=0;i<32;i++)
                     {
@@ -127,6 +128,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
 
                     reg_t space=0;//for arguments
                     reg_t pointers=user_stack- argc*sizeof(char*);
+                    pt_regs->regs[11]= pointers-kva2uva;
                     //notice: now we have to transfer all the kva to uva
                     //prepare space for arguments
                     for(int k=0;k<argc;k++)
@@ -148,7 +150,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
                     pt_regs->regs[2]=USER_STACK_ADDR+user_stack-real_user_sp-PAGE_SIZE;
                     pt_regs->regs[4]=(reg_t)&pcb[j];
                     pt_regs->regs[10]= argc;
-                    pt_regs->regs[11]= user_stack-kva2uva;
+                    
                     pt_regs->sepc = 0x10000;
                     pt_regs->scause = 0x0;
                     pt_regs->sstatus = SR_SPIE;//indicates that before interrupts are enabled
@@ -181,6 +183,7 @@ int do_kill(pid_t pid)
     //remove it from the ready_queue or sleep_queue
     LIST_REMOVE(&pcb[pid].list);
     //release its lock
+    
     do_release_locks(pid);
     //wake its waiters
     while(!LIST_IS_EMPTY(&pcb[pid].wait_list))
@@ -190,7 +193,7 @@ int do_kill(pid_t pid)
         waiter->status = TASK_READY;
         do_unblock(node);
     }
-    
+    freeProcessMem(pcb[pid].asid);
     //declare the process as exited
     pcb[pid].status = TASK_EXITED;
 }
@@ -241,3 +244,5 @@ pid_t do_getpid()
 {
     return current_running->pid;
 }
+
+void do_thread_create()

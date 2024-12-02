@@ -69,6 +69,8 @@ static inline void set_satp(
 
 #define PTE_MASK ((1lu<<54)-1)
 
+#define PPN_MASK (((1lu<<44) - 1) << 10)
+
 #define PPN_BITS 9lu
 #define NUM_PTE_ENTRY (1 << PPN_BITS)
 
@@ -78,25 +80,34 @@ typedef uint64_t PTE;
 static inline uintptr_t kva2pa(uintptr_t kva)
 {
     /* TODO: [P4-task1] */
-    return kva & 0xffffffff;
+    return (kva & 0xffffffff);
 }
 
 static inline uintptr_t pa2kva(uintptr_t pa)
 {
     /* TODO: [P4-task1] */
-    return pa | 0xffffffc000000000lu;
+    return (pa | 0xffffffc000000000lu);
 }
 
 /* Get/Set page frame number of the `entry` */
 static inline long get_pfn(PTE entry)
 {
     /* TODO: [P4-task1] */
-    return (entry & PTE_MASK) >> _PAGE_PFN_SHIFT;
+    return ((entry & PTE_MASK) >> _PAGE_PFN_SHIFT);
 }
 static inline void set_pfn(PTE *entry, uint64_t pfn)
 {
     /* TODO: [P4-task1] */
-    *entry |= (pfn << _PAGE_PFN_SHIFT) & PTE_MASK;
+    reg_t old_entry = ((*entry) & (~PPN_MASK));
+    pfn = ((pfn << _PAGE_PFN_SHIFT) & PTE_MASK);
+    *entry =old_entry| pfn;
+}
+
+
+
+static inline void clean_pte(PTE *entry)
+{
+    *entry = 0;
 }
 
 
@@ -112,12 +123,22 @@ static inline uint64_t get_pa(PTE entry)
 static inline long get_attribute(PTE entry, uint64_t mask)
 {
     /* TODO: [P4-task1] */
-    return entry & mask;
+    return (entry & mask);
 }
 static inline void set_attribute(PTE *entry, uint64_t bits)
 {
     /* TODO: [P4-task1] */
     *entry |= bits;
+}
+
+static inline void unset_attribute(PTE *entry, uint64_t bits)
+{
+    *entry &= ~bits;
+}
+
+static inline uint64_t get_page_base(uint64_t vaddr)
+{
+    return (vaddr & ~(NORMAL_PAGE_SIZE-1));
 }
 
 static inline void clear_pgdir(uintptr_t pgdir_addr)
@@ -139,12 +160,12 @@ static inline uint64_t get_vpn2(uint64_t vaddr)
 
 static inline uint64_t get_vpn1(uint64_t vaddr)
 {
-    return ((vaddr&VA_MASK)>>(NORMAL_PAGE_SHIFT+PPN_BITS))&((1lu<<(PPN_BITS+1))-1);
+    return ((vaddr&VA_MASK)>>(NORMAL_PAGE_SHIFT+PPN_BITS))&((1lu<<(PPN_BITS))-1);
 }
 
 static inline uint64_t get_vpn0(uint64_t vaddr)
 {
-    return ((vaddr & VA_MASK) >> (NORMAL_PAGE_SHIFT))&((1lu << (PPN_BITS + 1)) - 1);
+    return ((vaddr & VA_MASK) >> (NORMAL_PAGE_SHIFT))&((1lu << (PPN_BITS)) - 1);
 }
 
 

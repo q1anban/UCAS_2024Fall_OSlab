@@ -118,7 +118,7 @@ ELF_CREATEIMAGE = $(DIR_BUILD)/$(notdir $(SRC_CREATEIMAGE:.c=))
 # Top-level Rules
 # -----------------------------------------------------------------------
 
-all: dirs elf image asm # floppy
+all: dirs elf image asm padding#floppy
 
 dirs:
 	@mkdir -p $(DIR_BUILD)
@@ -132,6 +132,9 @@ floppy:
 
 asm: $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
 	for elffile in $^; do $(OBJDUMP) -d $$elffile > $(notdir $$elffile).txt; done
+
+padding:
+	@dd if=/dev/zero of=$(DIR_BUILD)/image oflag=append conv=notrunc bs=4MB count=1
 
 gdb:
 	$(GDB) $(ELF_MAIN) -ex "target remote:1234"

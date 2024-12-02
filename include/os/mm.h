@@ -37,12 +37,26 @@
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK+PAGE_SIZE)
 
 #define PAGE_TABLE_SIZE 4096 // 4K
-#define INIT_KERNEL_PAGETABLE 0xffffffc054000000
+#define INIT_KERNEL_PAGETABLE 0xffffffc053000000
 #define TEMP_TASK_IMG 0xffffffc056000000 //暂时存放task内容的地址
+#define SWAP_INFO_PLACE 0xffffffc057000000 //存放swap信息的地址
+#define VA_INFO_PLACE 0xffffffc057500000 //存放VA信息的地址
+#define SEC_INFO_PLACE 0xffffffc058000000 //存放sec信息的地址
 
 /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
 #define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))
+
+#define MAP_PAGE_ACCESSED 0x80
+
+typedef struct swap_
+{
+    reg_t va;
+    uint8_t asid;
+
+    //notice:the real sec num is padding_start_sec+sec_num*8
+    int sec_num;    
+} swap_info_t;
 
 void init_mm();
 
@@ -72,9 +86,20 @@ extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir,uint8_t asid);
 uintptr_t shm_page_get(int key);
 void shm_page_dt(uintptr_t addr);
 
-reg_t page_in_swap(reg_t va,reg_t asid);
+//find the page in swap
+//return the start sector of the page in swap, 0 if not in swap
+swap_info_t* page_in_swap(reg_t va,reg_t asid);
+
+//choose a page to swap out
+ptr_t choose_swap();
+
 //pgdir in pa
-//return PTE if page is in mem, 0 otherwise
-reg_t page_in_mem(reg_t va,reg_t pgdir);
+//return PTE* if page is in mem, 0 otherwise
+PTE* get_pte(reg_t va,reg_t pgdir);
+
+void set_map_page_accessed(int index);
+
+void swap_in(reg_t kva,swap_info_t* info);
+
 
 #endif /* MM_H */

@@ -36,6 +36,8 @@ char buf[VERSION_BUF];
 task_info_t tasks[TASK_MAXNUM];
 int tasknum;
 
+int padding_start_sec;
+
 /*
  * Once a CPU core calls this function,
  * it will stop executing!
@@ -101,12 +103,21 @@ static void init_task_info(void)
         tasks[i].mem_size = *((int *)ptr);
         ptr += 4;
     }
+    int tmp=0;
+    for (int i = 0; i < num; i++)
+    {
+        if(tmp<tasks[i].offset+tasks[i].file_size)
+        {
+            tmp=tasks[i].offset+tasks[i].file_size;
+        }
+    }
+    padding_start_sec = ROUND(tmp/SECTOR_SIZE,8);
 }
 
 /************************************************************/
 //kernel stack  and user stack are both kva
 static void init_pcb_stack(
-    ptr_t kernel_stack, ptr_t user_stack,pcb_t *pcb)
+    ptr_t kernel_stack,pcb_t *pcb)
 {
     /* TODO: [p2-task3] initialization of registers on kernel stack
      * HINT: sp, ra, sepc, sstatus
@@ -164,7 +175,7 @@ static void init_pcb(void)
     pid0_pcb[0].wait_list.prev = &pid0_pcb[0].wait_list;
     pid0_pcb[0].mbox_rw = -1;
     pid0_pcb[0].mutex_idx = -1;
-    pid0_pcb[0].kernel_sp = allocPage(pid0_pcb[0].asid)+PAGE_SIZE;//notice that sp is the top of the page
+    pid0_pcb[0].kernel_sp = allocPage(pid0_pcb[0].asid|KERNEL_PAGE)+PAGE_SIZE;//notice that sp is the top of the page
     pid0_pcb[0].satp = PGDIR_PA;
 
     pid0_pcb[1].asid = ASID_KERNEL|1;
@@ -179,7 +190,7 @@ static void init_pcb(void)
     pid0_pcb[1].wait_list.prev = &pid0_pcb[1].wait_list;
     pid0_pcb[1].mbox_rw = -1;
     pid0_pcb[1].mutex_idx = -1;
-    pid0_pcb[1].kernel_sp  =allocPage(pid0_pcb[1].asid)+PAGE_SIZE;
+    pid0_pcb[1].kernel_sp  =allocPage(pid0_pcb[1].asid|KERNEL_PAGE)+PAGE_SIZE;
     pid0_pcb[1].satp = PGDIR_PA;
     
 
@@ -228,6 +239,8 @@ static void init_syscall(void)
     syscall[SYSCALL_PS] = do_process_show;
     syscall[SYSCALL_GETPID] = do_getpid;
     syscall[SYSCALL_YIELD] = do_scheduler;
+    syscall[SYSCALL_THREAD_CREATE] = do_thread_create;
+    syscall[SYSCALL_THREAD_JOIN] = do_thread_join;
     syscall[SYSCALL_WRITE] = screen_write; 
     syscall[SYSCALL_READCH] = port_read_ch;
     syscall[SYSCALL_CURSOR] = screen_move_cursor;
@@ -262,7 +275,7 @@ void test()
             
             pcb[0].status = TASK_READY;
             pcb[0].satp = load_task_img(i,pcb[0].asid);
-            init_pcb_stack(allocPage(pcb[0].asid)+PAGE_SIZE, allocPage(pcb[0].asid)+PAGE_SIZE,&pcb[0]);//kernel sp and user sp using both kva
+            init_pcb_stack(allocPage(pcb[0].asid|KERNEL_PAGE)+PAGE_SIZE,&pcb[0]);//kernel sp  using  kva
             LIST_ADD_TAIL(&ready_queue, &pcb[0].list);
         }
     }
@@ -272,6 +285,9 @@ int main(void)
 {
     if (get_current_cpu_id() == 0) //CPU 0 entry here
     {        
+        // Init memory
+        init_mm();
+
         // Init jump table provided by kernel and bios(ΦωΦ)
         init_jmptab();
 
@@ -313,6 +329,8 @@ int main(void)
         // Init mailbox ( ๑͒･(ｴ)･๑͒)
         init_mbox();
         printk("> [INIT] Mailbox initialization succeeded.\n");
+
+        
         
         // Init Shell
         test();

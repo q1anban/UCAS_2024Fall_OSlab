@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <syscall.h>
 
 #define SHELL_BEGIN 20
 #define BUFFER_SIZE 128
@@ -159,6 +160,7 @@ void parse()
 
 int main(void)
 {
+    sys_clear();
     sys_move_cursor(0, SHELL_BEGIN);
     printf("------------------- COMMAND -------------------\n");
     printf("> root@UCAS_OS: ");

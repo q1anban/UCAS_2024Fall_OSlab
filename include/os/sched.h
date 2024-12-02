@@ -35,7 +35,9 @@
 #define NUM_MAX_TASK 16
 
 #define ASID_KERNEL 0x10
-#define ASID_USER 0xf0
+#define ASID_USER 0x20
+
+#define KERNEL_PAGE 0x40
 
 /* used to save register infomation */
 typedef struct regs_context
@@ -138,6 +140,10 @@ extern int do_kill(pid_t pid);
 extern int do_waitpid(pid_t pid);
 extern void do_process_show();
 extern pid_t do_getpid();
+extern void do_thread_create(pid_t *thread,
+                   void (*start_routine)(void*),
+                   void *arg);
+extern int do_thread_join(pid_t thread);
 /************************************************************/
 
 #endif

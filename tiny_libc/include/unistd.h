@@ -55,6 +55,9 @@ int sys_mbox_recv(int mbox_idx, void *msg, int msg_length);
 /* shmpageget/dt */
 void* sys_shmpageget(int key);
 void sys_shmpagedt(void *addr);
+
+void sys_thread_create(pthread_t* thread, void* (*start_routine)(void*), void* arg);
+int sys_thread_join(pthread_t thread);
 /************************************************************/
 
 #endif
