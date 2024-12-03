@@ -81,8 +81,8 @@ void handle_store_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scau
         {
             reg_t kva = allocPage(current_running->asid);
             swap_in(kva,info);
-            alloc_page_helper(stval,pa2kva(current_running->satp),current_running->asid);//re build the mapping
 
+            set_pfn(pte,kva2pa(kva)>>NORMAL_PAGE_SHIFT);//re build the mapping
             set_attribute(pte,_PAGE_ACCESSED|_PAGE_DIRTY|_PAGE_PRESENT);
             int index = (kva-INIT_KERNEL_STACK)/PAGE_SIZE;
             set_map_page_accessed(index);

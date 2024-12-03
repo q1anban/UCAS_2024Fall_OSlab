@@ -89,7 +89,7 @@ void swap_out(reg_t kva)
 
     sd_write(kva2pa(kva),PAGE_SIZE/SECTOR_SIZE,padding_start_sec+swap_info[i].sec_num*8);
 
-    printk("swap out page based on %x, used to map %x, asid %d, sec_num %d\n",kva,va,asid,swap_info[i].sec_num);
+    printk("swap out page based on %x, used to map %lx, asid %d, sec_num %d\n",kva,va,asid,swap_info[i].sec_num);
 }
 
 //swap in a page specified by swap info to kva
@@ -98,7 +98,7 @@ void swap_in(reg_t kva,swap_info_t* info)
     //read from swap
     sd_read(kva2pa(kva),PAGE_SIZE/SECTOR_SIZE,padding_start_sec+info->sec_num*8);
 
-    printk("swap in page based on %x, used to map %x, asid %d, sec_num %d\n",kva,info->va,info->asid,info->sec_num);
+    printk("swap in page based on %x, used to map %lx, asid %d, sec_num %d\n",kva,info->va,info->asid,info->sec_num);
     int num = (kva - INIT_KERNEL_STACK) / PAGE_SIZE;
     //config free_mem_map
     free_mem_map[num] = info->asid;

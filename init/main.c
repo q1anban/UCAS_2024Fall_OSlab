@@ -167,6 +167,7 @@ static void init_pcb(void)
     pid0_pcb[0].cursor_x = 0;
     pid0_pcb[0].cursor_y = 0;
     pid0_pcb[0].pid = -1;//-1 means kernel process
+    pid0_pcb[0].parent_pid = -1;
     pid0_pcb[0].list.next = &pid0_pcb[0].list;
     pid0_pcb[0].list.prev = &pid0_pcb[0].list;
     pid0_pcb[0].status = TASK_RUNNING;
@@ -182,6 +183,7 @@ static void init_pcb(void)
     pid0_pcb[1].cursor_x = 0;
     pid0_pcb[1].cursor_y = 0;
     pid0_pcb[1].pid = -1;// -1 mearns kernel process
+    pid0_pcb[1].parent_pid = -1;
     pid0_pcb[1].list.next = &pid0_pcb[1].list;
     pid0_pcb[1].list.prev = &pid0_pcb[1].list;
     pid0_pcb[1].status = TASK_RUNNING;
@@ -198,6 +200,7 @@ static void init_pcb(void)
     for (int i = 0; i < NUM_MAX_TASK; i++)
     {
         pcb[i].pid = i;
+        pcb[i].parent_pid = -1;
         pcb[i].status = TASK_EXITED;
         pcb[i].list.next = &pcb[i].list;
         pcb[i].list.prev = &pcb[i].list;
@@ -234,7 +237,7 @@ static void init_syscall(void)
     syscall[SYSCALL_EXEC] = do_exec;
     syscall[SYSCALL_EXIT] = do_exit;
     syscall[SYSCALL_SLEEP] = do_sleep;
-    syscall[SYSCALL_KILL] = do_kill;
+    syscall[SYSCALL_KILL] = do_kill_all;
     syscall[SYSCALL_WAITPID] = do_waitpid;
     syscall[SYSCALL_PS] = do_process_show;
     syscall[SYSCALL_GETPID] = do_getpid;

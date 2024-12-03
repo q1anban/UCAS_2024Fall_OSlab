@@ -85,6 +85,9 @@ typedef struct pcb
     /* process id */
     pid_t pid;
 
+    /* parent process id */
+    pid_t parent_pid;
+
     /* BLOCK | READY | RUNNING */
     task_status_t status;
 
@@ -137,6 +140,7 @@ extern pid_t do_exec(char *name, int argc, char *argv[]);
 #endif
 extern void do_exit(void);
 extern int do_kill(pid_t pid);
+extern int do_kill_all(pid_t pid);
 extern int do_waitpid(pid_t pid);
 extern void do_process_show();
 extern pid_t do_getpid();
