@@ -134,7 +134,7 @@ asm: $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
 	for elffile in $^; do $(OBJDUMP) -d $$elffile > $(notdir $$elffile).txt; done
 
 padding:
-	@dd if=/dev/zero of=$(DIR_BUILD)/image oflag=append conv=notrunc bs=32MB count=1
+	@dd if=/dev/zero of=$(DIR_BUILD)/image oflag=append conv=notrunc bs=8MB count=1
 
 gdb:
 	$(GDB) $(ELF_MAIN) -ex "target remote:1234"
