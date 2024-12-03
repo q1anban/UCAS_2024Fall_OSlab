@@ -58,6 +58,10 @@ void sys_shmpagedt(void *addr);
 
 void sys_thread_create(pthread_t* thread, void* (*start_routine)(void*), void* arg);
 int sys_thread_join(pthread_t thread);
+
+/* net send and recv */
+int sys_net_send(void *txpacket, int length);
+int sys_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens);
 /************************************************************/
 
 #endif

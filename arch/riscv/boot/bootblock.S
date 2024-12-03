@@ -67,7 +67,6 @@ secondary:
 wait_for_wakeup:
 	wfi
 	j wait_for_wakeup
-
 	/************************************************************/
 // while(1) --> stop here
 stop:

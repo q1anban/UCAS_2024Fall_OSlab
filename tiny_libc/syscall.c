@@ -261,8 +261,19 @@ void sys_shmpagedt(void *addr)
 {
     /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpagedt */
 }
-/************************************************************/
 
+int sys_net_send(void *txpacket, int length)
+{
+    /* TODO: [p5-task1] call invoke_syscall to implement sys_net_send */
+    return 0;
+}
+
+int sys_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
+{
+    /* TODO: [p5-task2] call invoke_syscall to implement sys_net_recv */
+    return 0;
+}
+/************************************************************/
 void sys_thread_create(pthread_t* thread, void* (*start_routine)(void*), void* arg)
 {
     invoke_syscall(SYSCALL_THREAD_CREATE, (long)thread, (long)start_routine, (long)arg, IGNORE, IGNORE);

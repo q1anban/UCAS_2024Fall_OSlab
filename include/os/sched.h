@@ -82,6 +82,9 @@ typedef struct pcb
     /*wait list to block*/
     list_node_t wait_list;
 
+    /* pgdir */
+    uintptr_t pgdir;
+
     /* process id */
     pid_t pid;
 
