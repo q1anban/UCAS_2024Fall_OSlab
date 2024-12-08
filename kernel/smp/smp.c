@@ -21,7 +21,7 @@ int locked=0;
 void lock_kernel()
 {
     /* TODO: P3-TASK3 multicore*/
-    while (atomic_swap(1,&locked))
+    while (atomic_swap(1,(ptr_t)&locked))
         ;
     
 }
@@ -29,5 +29,5 @@ void lock_kernel()
 void unlock_kernel()
 {
     /* TODO: P3-TASK3 multicore*/
-    atomic_swap(0,&locked);
+    atomic_swap(0,(ptr_t)&locked);
 }

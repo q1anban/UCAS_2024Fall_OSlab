@@ -45,7 +45,7 @@ uint64_t load_task_img(int taskid,uint8_t asid)
     for(int i=0;i<page_num;i++)
     {
         uint64_t kva=alloc_page_helper(0x10000+ i*PAGE_SIZE,page_dir,asid);//分配物理页
-        memcpy((void*)kva,start_ptr+i*PAGE_SIZE,PAGE_SIZE);//将task数据复制至其对应的页上
+        memcpy((uint8_t*)kva,(uint8_t*)(start_ptr+i*PAGE_SIZE),PAGE_SIZE);//将task数据复制至其对应的页上
     }
     //至此，完成了1、加载任务2、完成页表映射
     return kva2pa(page_dir);

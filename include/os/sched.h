@@ -111,6 +111,9 @@ typedef struct pcb
 
     uint64_t satp;
     unsigned asid;
+
+    int length;
+    uint8_t *buffer;
 } pcb_t;
 
 /* ready queue to run */

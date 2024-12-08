@@ -46,7 +46,7 @@ void sys_write(char *buff)
     /* TODO: [p2-task1] call call_jmptab to implement sys_write */
     //call_jmptab(CONSOLE_PUTSTR, (long)buff, IGNORE, IGNORE, IGNORE, IGNORE);
     /* TODO: [p2-task3] call invoke_syscall to implement sys_write */
-    invoke_syscall(SYSCALL_WRITE,buff,IGNORE,IGNORE,IGNORE,IGNORE);
+    invoke_syscall(SYSCALL_WRITE,(long)buff,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
 void sys_reflush(void)
@@ -114,7 +114,7 @@ void sys_set_sche_workload(int i)
 pid_t  sys_exec(char *name, int argc, char **argv)
 {
     /* TODO: [p3-task1] call invoke_syscall to implement sys_exec */
-    return invoke_syscall(SYSCALL_EXEC,name,argc,argv,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_EXEC,(long)name,argc,(long)argv,IGNORE,IGNORE);
 }
 // #endif
 
@@ -208,10 +208,10 @@ void sys_condition_destroy(int cond_idx)
     invoke_syscall(SYSCALL_COND_DESTROY,cond_idx,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
-int sys_semaphore_init(int key, int init)
-{
-    /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_init */
-}
+// int sys_semaphore_init(int key, int init)
+// {
+//     /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_init */
+// }
 
 void sys_semaphore_up(int sema_idx)
 {
@@ -231,7 +231,7 @@ void sys_semaphore_destroy(int sema_idx)
 int sys_mbox_open(char * name)
 {
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_open */
-    return invoke_syscall(SYSCALL_MBOX_OPEN,name,IGNORE,IGNORE,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_MBOX_OPEN,(long)name,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
 void sys_mbox_close(int mbox_id)
@@ -243,19 +243,19 @@ void sys_mbox_close(int mbox_id)
 int sys_mbox_send(int mbox_idx, void *msg, int msg_length)
 {
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_send */
-    return invoke_syscall(SYSCALL_MBOX_SEND,mbox_idx,msg,msg_length,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_MBOX_SEND,mbox_idx,(long)msg,msg_length,IGNORE,IGNORE);
 }
 
 int sys_mbox_recv(int mbox_idx, void *msg, int msg_length)
 {
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_recv */
-    return invoke_syscall(SYSCALL_MBOX_RECV,mbox_idx,msg,msg_length,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_MBOX_RECV,mbox_idx,(long)msg,msg_length,IGNORE,IGNORE);
 }
 
-void* sys_shmpageget(int key)
-{
-    /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpageget */
-}
+// void* sys_shmpageget(int key)
+// {
+//     /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpageget */
+// }
 
 void sys_shmpagedt(void *addr)
 {
@@ -265,7 +265,7 @@ void sys_shmpagedt(void *addr)
 int sys_net_send(void *txpacket, int length)
 {
     /* TODO: [p5-task1] call invoke_syscall to implement sys_net_send */
-    return 0;
+    return invoke_syscall(SYSCALL_NET_SEND, (long)txpacket, length, IGNORE,IGNORE,IGNORE);
 }
 
 int sys_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)

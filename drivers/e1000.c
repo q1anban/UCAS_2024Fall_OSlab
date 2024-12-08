@@ -55,12 +55,29 @@ static void e1000_reset(void)
 static void e1000_configure_tx(void)
 {
     /* TODO: [p5-task1] Initialize tx descriptors */
+    for(int i=0; i<TXDESCS; i++)
+    {
+        //DEXT=0 means using legacy descriptor format, RS means report status
+        //we assume that every frame is the end of a packet
+        tx_desc_array[i].cmd = ((~E1000_TXD_CMD_DEXT)&E1000_TXD_CMD_RS)|E1000_TXD_CMD_EOP;
+        tx_desc_array[i].status = E1000_TXD_STAT_DD;
+        tx_desc_array[i].length = TX_PKT_SIZE;
+        tx_desc_array[i].addr = (uint64_t)(kva2pa(tx_pkt_buffer[i]));
+    }
 
     /* TODO: [p5-task1] Set up the Tx descriptor base address and length */
+    e1000_write_reg(e1000, E1000_TDBAL, (uint32_t)kva2pa(tx_desc_array));
+    e1000_write_reg(e1000, E1000_TDBAH, (uint32_t)((kva2pa(tx_desc_array))>>32));
+    e1000_write_reg(e1000, E1000_TDLEN, TXDESCS * sizeof(struct e1000_tx_desc));
 
 	/* TODO: [p5-task1] Set up the HW Tx Head and Tail descriptor pointers */
-
+    e1000_write_reg(e1000, E1000_TDH, 0);
+    e1000_write_reg(e1000, E1000_TDT, 0);
     /* TODO: [p5-task1] Program the Transmit Control Register */
+    e1000_write_reg(e1000,E1000_TCTL,E1000_TCTL_PSP|E1000_TCTL_EN|(0x10<<4)|(0x40<<12));
+    //E1000_TCTL_CT 0x00000ff0 , set to 0x10
+    //E1000_TCTL_COLD 0x003ff000 , set to 0x40
+    local_flush_dcache();
 }
 
 /**
@@ -105,8 +122,24 @@ void e1000_init(void)
 int e1000_transmit(void *txpacket, int length)
 {
     /* TODO: [p5-task1] Transmit one packet from txpacket */
+    local_flush_dcache();
+    int tail =e1000_read_reg(e1000, E1000_TDT);
+    if(tx_desc_array[tail].status & E1000_TXD_STAT_DD)
+    {
+        //available descriptor
+        local_flush_dcache();
+        memcpy(tx_pkt_buffer[tail], txpacket, length);
+        tx_desc_array[tail].length = length;
+        tx_desc_array[tail].status ^= E1000_TXD_STAT_DD;//remove DD bit for head pointer to set it
+        e1000_write_reg(e1000, E1000_TDT, (tail+1)%TXDESCS);
 
-    return 0;
+        local_flush_dcache();
+        return length;
+    }else
+    {
+        //no more available descriptor
+        return 0;
+    }
 }
 
 /**
@@ -119,4 +152,17 @@ int e1000_poll(void *rxbuffer)
     /* TODO: [p5-task2] Receive one packet and put it into rxbuffer */
 
     return 0;
+}
+
+/**
+ * @return - if tail pointer is available for transmitting return 1, else return 0
+ * **/
+int update_tx_desc()
+{
+    local_flush_dcache();
+    int tail = e1000_read_reg(e1000, E1000_TDT);
+    if(tx_desc_array[tail].status & E1000_TXD_STAT_DD)
+        return 1;
+    else
+        return 0;
 }

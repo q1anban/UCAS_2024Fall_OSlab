@@ -14,8 +14,8 @@
 #define MEM_PAGE_NUM (FREE_MEM_SIZE/PAGE_SIZE)
 #define PGT_PAGE_NUM (FREE_PGT_SIZE/PAGE_SIZE)
 // NOTE: A/C-core
-static ptr_t kernMemCurr = INIT_KERNEL_STACK;
-static ptr_t kernPgTCurr = INIT_KERNEL_PAGETABLE;
+// static ptr_t kernMemCurr = INIT_KERNEL_STACK;
+// static ptr_t kernPgTCurr = INIT_KERNEL_PAGETABLE;
 //using bit map to manage the free memory
 uint8_t free_mem_map[MEM_PAGE_NUM];
 uint8_t free_pgt_map[PGT_PAGE_NUM];
@@ -76,7 +76,6 @@ void swap_out(reg_t kva)
     PTE* pte = get_pte(va,pgdir);
     if(pte)//mysterious bug here ,*pte should never be null
     {
-        reg_t ppn = get_pa(*pte);
         unset_attribute(pte,_PAGE_PRESENT);
     }
     free_mem_map[num] = 0;
@@ -187,7 +186,7 @@ swap_info_t* page_in_swap(reg_t va,reg_t asid)
     return 0;
 }
 
-//notice :choose a USER page to swap out
+//notice:choose a USER page to swap out
 //return kva of the page
 ptr_t choose_swap()
 {
@@ -260,10 +259,10 @@ void freeProcessMem(uint8_t asid)
 }
 
 
-void *kmalloc(size_t size)
-{
-    // TODO [P4-task1] (design you 'kmalloc' here if you need):
-}
+// void *kmalloc(size_t size)
+// {
+//     // TODO [P4-task1] (design you 'kmalloc' here if you need):
+// }
 
 
 /* this is used for mapping kernel virtual address into user page table */
@@ -276,7 +275,6 @@ void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
     PTE* src = (PTE*)src_pgdir;
     for(int i=0;i<num;i++)
     {
-
         dest[i] = src[i];
     }
 }
@@ -284,7 +282,7 @@ void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
 /* allocate physical page for `va`, mapping it into `pgdir`,
    return the kernel virtual address for the page
    */
-//using small page : 4KB
+//using small page: 4KB
 //we assume that alloc and free operation have cleared what they allocated
 //receive pgdir as kva
 uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir,uint8_t asid)
@@ -301,7 +299,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir,uint8_t asid)
         set_pfn(&pgd0[vpn2],kva2pa(pgt)>>NORMAL_PAGE_SHIFT);
         set_attribute(&pgd0[vpn2],_PAGE_PRESENT);//other bits are set to 0
     }
-    PTE* pgd1 =pa2kva(get_pa(pgd0[vpn2]));
+    PTE* pgd1 =(PTE*)pa2kva(get_pa(pgd0[vpn2]));
     uint64_t vpn1 = get_vpn1(va);
     if(pgd1[vpn1]==0)
     {
@@ -309,7 +307,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir,uint8_t asid)
         set_pfn(&pgd1[vpn1],kva2pa(pgt)>>NORMAL_PAGE_SHIFT);
         set_attribute(&pgd1[vpn1],_PAGE_PRESENT);
     }
-    PTE* pgd2 = pa2kva(get_pa(pgd1[vpn1]));
+    PTE* pgd2 = (PTE*)pa2kva(get_pa(pgd1[vpn1]));
     uint64_t vpn0 = get_vpn0(va);
     set_pfn(&pgd2[vpn0],kva2pa(kva)>>NORMAL_PAGE_SHIFT);
     set_attribute(&pgd2[vpn0],_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC  | _PAGE_USER);
@@ -341,10 +339,10 @@ void set_map_page_accessed(int index)
     free_mem_map[index] |= MAP_PAGE_ACCESSED;
 }
 
-uintptr_t shm_page_get(int key)
-{
-    // TODO [P4-task4] shm_page_get:
-}
+// uintptr_t shm_page_get(int key)
+// {
+//     // TODO [P4-task4] shm_page_get:
+// }
 
 void shm_page_dt(uintptr_t addr)
 {

@@ -175,10 +175,11 @@ static inline uint64_t get_vpn0(uint64_t vaddr)
  * 
  * return the kernel virtual address of the physical address 
  */
+/*
 static inline uintptr_t get_kva_of(uintptr_t va, uintptr_t pgdir_va)
 {
     // TODO: [P4-task1] (todo if you need)
 }
-
+*/
 
 #endif  // PGTABLE_H

@@ -26,7 +26,6 @@ void init_locks(void)
         mlocks[i].block_queue.prev = &mlocks[i].block_queue;
         mlocks[i].key= -1;//-1 means no process has the lock
         mlocks[i].lock.status=UNLOCKED;
-        printk("lock %d initialized\n",i);
     }
 }
 
@@ -87,7 +86,7 @@ void do_mutex_lock_acquire(int mlock_idx)
     else//the lock is locked
     {
         //add current thread to the blocked queue
-        list_node_t *node = PCB_TO_NODE(current_running);
+        list_node_t *node =&current_running->list;
         current_running->status = TASK_BLOCKED;
         do_block(node,&mlocks[mlock_idx].block_queue);
         do_scheduler();
@@ -106,7 +105,7 @@ void do_mutex_lock_acquire_non_sched(pcb_t *pcb_,int mlock_idx)
     else//the lock is locked
     {
         //add current thread to the blocked queue
-        list_node_t *node = PCB_TO_NODE(pcb_);
+        list_node_t *node = & pcb_->list;
         pcb_->status = TASK_BLOCKED;
         do_block(node,&mlocks[mlock_idx].block_queue);
     }
@@ -213,7 +212,7 @@ void do_barrier_wait(int barr_idx)
     }else
     {
         //add current thread to the wait queue
-        list_node_t *node = PCB_TO_NODE(current_running);
+        list_node_t *node = &current_running->list;
         current_running->status = TASK_BLOCKED;
         do_block(node,&barriers[barr_idx].wait_queue);
         do_scheduler();
@@ -266,7 +265,7 @@ void do_condition_wait(int cond_idx, int mutex_idx)
 {
     //add current thread to the wait queue
     do_mutex_lock_release(mutex_idx);
-    list_node_t *node = PCB_TO_NODE(current_running);
+    list_node_t *node =& current_running->list;
     current_running->status = TASK_BLOCKED;
     current_running->mutex_idx = mutex_idx;
     do_block(node,&conditions[cond_idx].wait_queue);
@@ -361,8 +360,7 @@ int do_mbox_send(int mbox_idx, void *msg,int msg_length)
 {
     if(mboxes[mbox_idx].length + msg_length <=MAX_MBOX_LENGTH )//available space
     {
-        int i=0;
-        memcpy(((char*)mboxes[mbox_idx].buffer+mboxes[mbox_idx].length),msg,msg_length);//finish sending
+        memcpy(((uint8_t*)mboxes[mbox_idx].buffer+mboxes[mbox_idx].length),(uint8_t*)msg,msg_length);//finish sending
         mboxes[mbox_idx].length+=msg_length;
         
         list_node_t *node = mboxes[mbox_idx].wait_queue.next;
@@ -374,12 +372,13 @@ int do_mbox_send(int mbox_idx, void *msg,int msg_length)
             pcb_ = NODE_TO_PCB(node);
             if(pcb_->mbox_rw==0 && mboxes[mbox_idx].length >= pcb_->mbox_size)//is read and exists enough data
             {
-                memcpy(pcb_->mbox_buf,mboxes[mbox_idx].buffer,pcb_->mbox_size);
+                memcpy((uint8_t*)(pcb_->mbox_buf),(uint8_t*)(mboxes[mbox_idx].buffer),pcb_->mbox_size);
                 mboxes[mbox_idx].length-=pcb_->mbox_size;
-                memcpy((char*)mboxes[mbox_idx].buffer,((char*)mboxes[mbox_idx].buffer+pcb_->mbox_size),mboxes[mbox_idx].length);
+                memcpy((uint8_t*)mboxes[mbox_idx].buffer,((uint8_t*)mboxes[mbox_idx].buffer+pcb_->mbox_size),mboxes[mbox_idx].length);
                 pcb_->mbox_rw=-1;
                 do_unblock(node);
                 pcb_->status = TASK_READY;
+                //TODO :set return value ... ... how ?
             }
             node = temp;
         }
@@ -387,7 +386,7 @@ int do_mbox_send(int mbox_idx, void *msg,int msg_length)
     }else//no available space ,add current thread to the wait queue
     {
         current_running->status = TASK_BLOCKED;
-        do_block(PCB_TO_NODE(current_running),&mboxes[mbox_idx].wait_queue);
+        do_block(&current_running->list,&mboxes[mbox_idx].wait_queue);
         current_running->mbox_buf = msg;
         current_running->mbox_size = msg_length;
         current_running->mbox_rw = 1;
@@ -395,6 +394,7 @@ int do_mbox_send(int mbox_idx, void *msg,int msg_length)
         regs_context_t *pt_regs = (regs_context_t *)current_running->kernel_sp;
         pt_regs->regs[10] = msg_length;
         do_scheduler();
+        return msg_length;
     }
 }
 
@@ -402,9 +402,9 @@ int do_mbox_recv(int mbox_idx, void *msg,int msg_length)
 {
     if(mboxes[mbox_idx].length >= msg_length)//available data
     {
-        memcpy(msg,mboxes[mbox_idx].buffer,msg_length);//finish receiving
+        memcpy((uint8_t*)msg,(uint8_t*)mboxes[mbox_idx].buffer,msg_length);//finish receiving
         mboxes[mbox_idx].length-=msg_length;
-        memcpy((char*)mboxes[mbox_idx].buffer,((char*)mboxes[mbox_idx].buffer+msg_length),mboxes[mbox_idx].length);//finish reading
+        memcpy((uint8_t*)mboxes[mbox_idx].buffer,((uint8_t*)mboxes[mbox_idx].buffer+msg_length),mboxes[mbox_idx].length);//finish reading
 
         list_node_t *node = mboxes[mbox_idx].wait_queue.next;
         list_node_t *temp = NULL;
@@ -415,7 +415,7 @@ int do_mbox_recv(int mbox_idx, void *msg,int msg_length)
             pcb_ = NODE_TO_PCB(node);
             if(pcb_->mbox_rw==1 && mboxes[mbox_idx].length + pcb_->mbox_size <= MAX_MBOX_LENGTH)//is write and exists enough data
             {
-                memcpy(((char*)mboxes[mbox_idx].buffer+mboxes[mbox_idx].length),pcb_->mbox_buf,pcb_->mbox_size);
+                memcpy(((uint8_t*)mboxes[mbox_idx].buffer+mboxes[mbox_idx].length),(uint8_t*)pcb_->mbox_buf,pcb_->mbox_size);
                 mboxes[mbox_idx].length+=pcb_->mbox_size;
                 pcb_->mbox_rw=-1;
                 do_unblock(node);
@@ -427,7 +427,7 @@ int do_mbox_recv(int mbox_idx, void *msg,int msg_length)
     }else//no available data ,add current thread to the wait queue
     {
         current_running->status = TASK_BLOCKED;
-        do_block(PCB_TO_NODE(current_running),&mboxes[mbox_idx].wait_queue);
+        do_block(&current_running->list,&mboxes[mbox_idx].wait_queue);
         current_running->mbox_buf = msg;
         current_running->mbox_size = msg_length;
         current_running->mbox_rw = 0;
@@ -435,6 +435,7 @@ int do_mbox_recv(int mbox_idx, void *msg,int msg_length)
         regs_context_t *pt_regs = (regs_context_t *)current_running->kernel_sp;
         pt_regs->regs[10] = msg_length;
         do_scheduler();
+        return msg_length;
     }
 }
 

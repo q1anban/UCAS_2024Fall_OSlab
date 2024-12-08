@@ -45,6 +45,7 @@
 #include <type.h>
 #include <csr.h>
 #include <os/smp.h>
+#include <os/net.h>
 
 extern void ret_from_exception();
 
@@ -70,12 +71,12 @@ int padding_start_sec;
  * Once a CPU core calls this function,
  * it will stop executing!
  */
-static void kernel_brake(void)
-{
-    disable_interrupt();
-    while (1)
-        __asm__ volatile("wfi");
-}
+// static void kernel_brake(void)
+// {
+//     disable_interrupt();
+//     while (1)
+//         __asm__ volatile("wfi");
+// }
 
 static void init_jmptab(void)
 {
@@ -262,37 +263,40 @@ static void clean_temp_page(void)
 static void init_syscall(void)
 {
     // TODO: [p2-task3] initialize system call table.
-    syscall[SYSCALL_EXEC] = do_exec;
-    syscall[SYSCALL_EXIT] = do_exit;
-    syscall[SYSCALL_SLEEP] = do_sleep;
-    syscall[SYSCALL_KILL] = do_kill_all;
-    syscall[SYSCALL_WAITPID] = do_waitpid;
-    syscall[SYSCALL_PS] = do_process_show;
-    syscall[SYSCALL_GETPID] = do_getpid;
-    syscall[SYSCALL_YIELD] = do_scheduler;
-    syscall[SYSCALL_THREAD_CREATE] = do_thread_create;
-    syscall[SYSCALL_THREAD_JOIN] = do_thread_join;
-    syscall[SYSCALL_WRITE] = screen_write; 
-    syscall[SYSCALL_READCH] = port_read_ch;
-    syscall[SYSCALL_CURSOR] = screen_move_cursor;
-    syscall[SYSCALL_REFLUSH] = screen_reflush;
-    syscall[SYSCALL_CLEAR] = screen_clear;
-    syscall[SYSCALL_GET_TIMEBASE] = get_time_base;
-    syscall[SYSCALL_GET_TICK] = get_ticks;
-    syscall[SYSCALL_LOCK_INIT] = do_mutex_lock_init;
-    syscall[SYSCALL_LOCK_ACQ] = do_mutex_lock_acquire;
-    syscall[SYSCALL_LOCK_RELEASE] = do_mutex_lock_release;
-    syscall[SYSCALL_BARR_INIT] = do_barrier_init;
-    syscall[SYSCALL_BARR_WAIT] = do_barrier_wait;
-    syscall[SYSCALL_BARR_DESTROY] = do_barrier_destroy;
-    syscall[SYSCALL_COND_INIT] = do_condition_init;
-    syscall[SYSCALL_COND_WAIT] = do_condition_wait;
-    syscall[SYSCALL_COND_SIGNAL] = do_condition_signal;
-    syscall[SYSCALL_COND_BROADCAST] = do_condition_broadcast;
-    syscall[SYSCALL_MBOX_OPEN] = do_mbox_open;
-    syscall[SYSCALL_MBOX_CLOSE] = do_mbox_close;
-    syscall[SYSCALL_MBOX_SEND] = do_mbox_send;
-    syscall[SYSCALL_MBOX_RECV] = do_mbox_recv;
+    syscall[SYSCALL_EXEC] = (long (*)())do_exec;
+    syscall[SYSCALL_EXIT] = (long (*)())do_exit;
+    syscall[SYSCALL_SLEEP] = (long (*)())do_sleep;
+    syscall[SYSCALL_KILL] = (long (*)())do_kill_all;
+    syscall[SYSCALL_WAITPID] = (long (*)())do_waitpid;
+    syscall[SYSCALL_PS] = (long (*)())do_process_show;
+    syscall[SYSCALL_GETPID] = (long (*)())do_getpid;
+    syscall[SYSCALL_YIELD] = (long (*)())do_scheduler;
+    syscall[SYSCALL_THREAD_CREATE] = (long (*)())do_thread_create;
+    syscall[SYSCALL_THREAD_JOIN] = (long (*)())do_thread_join;
+    syscall[SYSCALL_WRITE] =(long (*)()) screen_write; 
+    syscall[SYSCALL_READCH] = (long (*)())port_read_ch;
+    syscall[SYSCALL_CURSOR] = (long (*)())screen_move_cursor;
+    syscall[SYSCALL_REFLUSH] = (long (*)())screen_reflush;
+    syscall[SYSCALL_CLEAR] = (long (*)())screen_clear;
+    syscall[SYSCALL_GET_TIMEBASE] = (long (*)())get_time_base;
+    syscall[SYSCALL_GET_TICK] = (long (*)())get_ticks;
+    syscall[SYSCALL_LOCK_INIT] = (long (*)())do_mutex_lock_init;
+    syscall[SYSCALL_LOCK_ACQ] = (long (*)())do_mutex_lock_acquire;
+    syscall[SYSCALL_LOCK_RELEASE] = (long (*)())do_mutex_lock_release;
+    syscall[SYSCALL_BARR_INIT] = (long (*)())do_barrier_init;
+    syscall[SYSCALL_BARR_WAIT] = (long (*)())do_barrier_wait;
+    syscall[SYSCALL_BARR_DESTROY] = (long (*)())do_barrier_destroy;
+    syscall[SYSCALL_COND_INIT] = (long (*)())do_condition_init;
+    syscall[SYSCALL_COND_WAIT] = (long (*)())do_condition_wait;
+    syscall[SYSCALL_COND_SIGNAL] = (long (*)())do_condition_signal;
+    syscall[SYSCALL_COND_BROADCAST] = (long (*)())do_condition_broadcast;
+    syscall[SYSCALL_MBOX_OPEN] = (long (*)())do_mbox_open;
+    syscall[SYSCALL_MBOX_CLOSE] = (long (*)())do_mbox_close;
+    syscall[SYSCALL_MBOX_SEND] = (long (*)())do_mbox_send;
+    syscall[SYSCALL_MBOX_RECV] = (long (*)())do_mbox_recv;
+    syscall[SYSCALL_NET_SEND] = (long (*)())do_net_send;
+    syscall[SYSCALL_NET_RECV] = (long (*)())do_net_recv;
+
 }
 /************************************************************/
 
@@ -331,32 +335,33 @@ int main(void)
 
         // Read Flatten Device Tree (｡•ᴗ-)_
         time_base = bios_read_fdt(TIMEBASE);
-    e1000 = (volatile uint8_t *)bios_read_fdt(EHTERNET_ADDR);
-    uint64_t plic_addr = bios_read_fdt(PLIC_ADDR);
-    uint32_t nr_irqs = (uint32_t)bios_read_fdt(NR_IRQS);
-    printk("> [INIT] e1000: %lx, plic_addr: %lx, nr_irqs: %lx.\n", e1000, plic_addr, nr_irqs);
-
-    // IOremap
-    plic_addr = (uintptr_t)ioremap((uint64_t)plic_addr, 0x4000 * NORMAL_PAGE_SIZE);
-    e1000 = (uint8_t *)ioremap((uint64_t)e1000, 8 * NORMAL_PAGE_SIZE);
-    printk("> [INIT] IOremap initialization succeeded.\n");
         printk("> [INIT] CPU frequency is %d Hz.\n", time_base);
+
+        e1000 = (volatile uint8_t *)bios_read_fdt(ETHERNET_ADDR);
+        uint64_t plic_addr = bios_read_fdt(PLIC_ADDR);
+        uint32_t nr_irqs = (uint32_t)bios_read_fdt(NR_IRQS);
+        printk("> [INIT] e1000: %lx, plic_addr: %lx, nr_irqs: %lx.\n", e1000, plic_addr, nr_irqs);
+
+        // IOremap
+        plic_addr = (uintptr_t)ioremap((uint64_t)plic_addr, 0x4000 * NORMAL_PAGE_SIZE);
+        e1000 = (uint8_t *)ioremap((uint64_t)e1000, 8 * NORMAL_PAGE_SIZE);
+        printk("> [INIT] IOremap initialization succeeded.\n");
 
         // Init lock mechanism o(´^｀)o
         init_locks();
         printk("> [INIT] Lock mechanism initialization succeeded.\n");
 
-    // Init interrupt (^_^)
-    init_exception();
-    printk("> [INIT] Interrupt processing initialization succeeded.\n");
+        // Init interrupt (^_^)
+        init_exception();
+        printk("> [INIT] Interrupt processing initialization succeeded.\n");
 
-    // TODO: [p5-task4] Init plic
-    // plic_init(plic_addr, nr_irqs);
-    // printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
+        // TODO: [p5-task4] Init plic
+        // plic_init(plic_addr, nr_irqs);
+        // printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
 
-    // Init network device
-    e1000_init();
-    printk("> [INIT] E1000 device initialized successfully.\n");
+        // Init network device
+        e1000_init();
+        printk("> [INIT] E1000 device initialized successfully.\n");
 
         // Init system call table (0_0)
         init_syscall();

@@ -6,7 +6,7 @@
 #include <screen.h>
 #include <printk.h>
 #include <assert.h>
-
+#include <os/net.h>
 #include <os/loader.h>
 #include <os/task.h>
 #include <csr.h>
@@ -168,7 +168,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
                     LIST_ADD_TAIL(&ready_queue, &pcb[j].list);
                     pcb[j].pid = j;
                     LIST_REMOVE(&pcb[j].wait_list);
-                    pcb[j].kernel_sp = pt_regs;
+                    pcb[j].kernel_sp =(reg_t) pt_regs;
                     pcb[j].user_sp = user_stack;
 
                     return j;
@@ -197,6 +197,7 @@ int do_kill_all(pid_t pid)
     }
     do_kill(pid);
     freeProcessMem(pcb[pid].asid);
+    return 1;
 }
 
 int do_kill(pid_t pid)
@@ -216,6 +217,7 @@ int do_kill(pid_t pid)
     }
     // declare the process as exited
     pcb[pid].status = TASK_EXITED;
+    return 1;
 }
 
 int do_waitpid(pid_t pid)
@@ -226,6 +228,7 @@ int do_waitpid(pid_t pid)
         current_running->status = TASK_BLOCKED;
         do_scheduler();
     }
+    return 0;
 }
 
 void do_process_show()
@@ -278,7 +281,7 @@ void do_thread_create(pid_t *thread, void (*start_routine)(void *), void *arg)
             int num = get_child_thread_num(current_running->pid);
             num++;
             // map USER_STACK_ADDR-PAGE_SIZE ~ USER_STACK_ADDR to user stack
-            reg_t real_user_sp = alloc_page_helper(USER_STACK_ADDR - num*PAGE_SIZE, pa2kva(pcb[j].satp), pcb[j].asid);
+            alloc_page_helper(USER_STACK_ADDR - num*PAGE_SIZE, pa2kva(pcb[j].satp), pcb[j].asid);
             reg_t kernel_stack = allocPage(pcb[j].asid | KERNEL_PAGE) + PAGE_SIZE;
             regs_context_t *pt_regs = (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
             for (int i = 0; i < 32; i++)
@@ -290,9 +293,9 @@ void do_thread_create(pid_t *thread, void (*start_routine)(void *), void *arg)
 
             pt_regs->regs[2] = USER_STACK_ADDR - num*PAGE_SIZE;
             pt_regs->regs[4] = (reg_t)&pcb[j];
-            pt_regs->regs[10] = arg;
+            pt_regs->regs[10] =(reg_t) arg;
 
-            pt_regs->sepc = start_routine;
+            pt_regs->sepc =(reg_t) start_routine;
             pt_regs->scause = 0x0;
             pt_regs->sstatus = SR_SPIE;  // indicates that before interrupts are enabled
             pt_regs->sstatus &= ~SR_SPP; // indicates user mode
@@ -301,7 +304,7 @@ void do_thread_create(pid_t *thread, void (*start_routine)(void *), void *arg)
             LIST_ADD_TAIL(&ready_queue, &pcb[j].list);
             pcb[j].pid = j;
             LIST_REMOVE(&pcb[j].wait_list);
-            pcb[j].kernel_sp = pt_regs;
+            pcb[j].kernel_sp = (reg_t)pt_regs;
             *thread = j;
             return;
         }

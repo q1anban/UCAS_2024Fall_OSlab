@@ -3,10 +3,6 @@
 long (*syscall[NUM_SYSCALLS])();
 
 
-//?
-//WARNING!!!!!!!!!!!!!!!!!!!!!!
-//AS WE HAVE MODIFIED THE RA
-//IF the return value of syscall can't be stored in regs->regs[10],you need to modify the code restore function!!!!!!!!!!!!!
 void handle_syscall(regs_context_t *regs, uint64_t interrupt, uint64_t cause)
 {
     /* TODO: [p2-task3] handle syscall exception */

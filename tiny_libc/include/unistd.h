@@ -45,6 +45,8 @@ void sys_condition_signal(int cond_idx);
 void sys_condition_broadcast(int cond_idx);
 void sys_condition_destroy(int cond_idx);
 
+void sys_clear();
+
 /* TODO: [P3 task2] mailbox */ 
 int sys_mbox_open(char * name);
 void sys_mbox_close(int mbox_id);
