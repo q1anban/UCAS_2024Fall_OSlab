@@ -112,8 +112,11 @@ typedef struct pcb
     uint64_t satp;
     unsigned asid;
 
-    int length;
-    uint8_t *buffer;
+    /* network info*/
+    int net_curr_num;       //write: not used, read:represent currenct num
+    int net_length;         //write:represent the length ,read:represent the max packet size
+    uint8_t *net_buffer;    //write:represent the buffer,read:represent the buffer
+    int* net_packet_size;   //write:not used, read: represent the received packet size
 } pcb_t;
 
 /* ready queue to run */

@@ -310,7 +310,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir,uint8_t asid)
     PTE* pgd2 = (PTE*)pa2kva(get_pa(pgd1[vpn1]));
     uint64_t vpn0 = get_vpn0(va);
     set_pfn(&pgd2[vpn0],kva2pa(kva)>>NORMAL_PAGE_SHIFT);
-    set_attribute(&pgd2[vpn0],_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC  | _PAGE_USER);
+    set_attribute(&pgd2[vpn0],_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC  | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY);//for net 
     va_info[(kva - INIT_KERNEL_STACK)/PAGE_SIZE]= get_page_base(va);
     return kva;
 }

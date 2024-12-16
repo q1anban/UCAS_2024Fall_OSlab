@@ -37,7 +37,7 @@
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK+PAGE_SIZE)
 
 #define PAGE_TABLE_SIZE 4096 // 4K
-#define INIT_KERNEL_PAGETABLE 0xffffffc053000000
+#define INIT_KERNEL_PAGETABLE 0xffffffc054000000
 #define TEMP_TASK_IMG 0xffffffc056000000 //暂时存放task内容的地址
 #define SWAP_INFO_PLACE 0xffffffc055000000 //存放swap信息的地址
 #define VA_INFO_PLACE 0xffffffc055500000 //存放VA信息的地址
@@ -100,6 +100,12 @@ PTE* get_pte(reg_t va,reg_t pgdir);
 void set_map_page_accessed(int index);
 
 void swap_in(reg_t kva,swap_info_t* info);
+
+static inline uint64_t get_kva(uintptr_t va, uintptr_t pgdir)
+{
+    PTE* pte = get_pte(va, pgdir);
+    return pa2kva(get_pa(*pte)) + get_page_offset(va);
+}
 
 
 #endif /* MM_H */

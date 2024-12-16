@@ -69,7 +69,7 @@ void do_scheduler(void)
 
     current_running = next_pcb;
     // TODO: [p2-task1] switch_to current_running
-    // switch_to(current_running, next_pcb);
+    //switch_to(current_running, next_pcb);
 }
 
 void do_sleep(uint32_t sleep_time)
@@ -117,6 +117,8 @@ pid_t do_exec(char *name, int argc, char *argv[])
                     pcb[j].asid = ASID_USER | j;
                     pcb[j].satp = load_task_img(i, pcb[j].asid); // page table
                     pcb[j].parent_pid = -1;
+                    pcb[j].net_curr_num = 0;
+                    pcb[j].net_length=0;
                     // map USER_STACK_ADDR-PAGE_SIZE ~ USER_STACK_ADDR to user stack
                     reg_t real_user_sp = alloc_page_helper(USER_STACK_ADDR - PAGE_SIZE, pa2kva(pcb[j].satp), pcb[j].asid);
                     //"user_stack" in kernel

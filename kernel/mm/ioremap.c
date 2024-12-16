@@ -6,7 +6,6 @@
 
 #define HUGE_PAGE_SIZE (0x40000000lu)
 #define BIG_PAGE_SIZE (0x200000lu)
-#define PAGE_SIZE (0x1000lu)
 
 // maybe you can map it to IO_ADDR_START ?
 static uintptr_t io_base = IO_ADDR_START;

@@ -4,10 +4,19 @@
 #include <os/string.h>
 #include <os/kernel.h>
 #include <os/mm.h>
+#include <plic.h>
 #include <os/net.h>
 #include <printk.h>
 #include <assert.h>
 #include <screen.h>
+
+//#define PYNQ
+
+#ifdef PYNQ
+#define PLIC_E1000_IRQ 3
+#else
+#define PLIC_E1000_IRQ 33
+#endif
 
 handler_t irq_table[IRQC_COUNT];
 handler_t exc_table[EXCC_COUNT];
@@ -36,7 +45,6 @@ void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
     // Note: use bios_set_timer to reset the timer and remember to reschedule
     bios_set_timer(get_ticks() + TIMER_INTERVAL);
     screen_reflush();
-    update_net_send();// check if there is any data to send
     do_scheduler();
 }
 
@@ -106,7 +114,14 @@ void handle_store_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scau
 void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     // TODO: [p5-task4] external interrupt handler.
+    
     // Note: plic_claim and plic_complete will be helpful ...
+    uint32_t irq_ext = plic_claim();
+    if(irq_ext == PLIC_E1000_IRQ)
+    {
+        net_handle_irq();
+    }
+    plic_complete(irq_ext);
 }
 
 void init_exception()
@@ -128,7 +143,7 @@ void init_exception()
     irq_table[IRQC_S_TIMER] = handle_irq_timer;
     irq_table[IRQC_M_TIMER] = handle_other;
     irq_table[IRQC_U_EXT] = handle_other;
-    irq_table[IRQC_S_EXT] = handle_other;
+    irq_table[IRQC_S_EXT] = handle_irq_ext;
     irq_table[IRQC_M_EXT] = handle_other;
     irq_table[IRQC_U_SOFT] = handle_other;
     irq_table[IRQC_S_SOFT] = handle_other;//

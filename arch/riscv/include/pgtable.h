@@ -141,6 +141,11 @@ static inline uint64_t get_page_base(uint64_t vaddr)
     return (vaddr & ~(NORMAL_PAGE_SIZE-1));
 }
 
+static inline uint64_t get_page_offset(uint64_t vaddr)
+{
+    return (vaddr & (NORMAL_PAGE_SIZE-1));
+}
+
 static inline void clear_pgdir(uintptr_t pgdir_addr)
 {
     /* TODO: [P4-task1] */
