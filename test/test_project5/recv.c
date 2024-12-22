@@ -27,11 +27,12 @@ int main(void)
             printf("packet %d:\n", i);
             for (int j = 0; j < (recv_length[i] + 15) / 16; ++j) {
                 
-                for (int k = 0; k < 16 && (j * 16 + k < recv_length[i]); ++k) {
-                    printf("%02x ", (uint32_t)(*(uint8_t*)curr));
-                    ++curr;
-                }
-                printf("\n");
+                // for (int k = 0; k < 16 && (j * 16 + k < recv_length[i]); ++k) {
+                //     printf("%02x ", (uint32_t)(*(uint8_t*)curr));
+                //     ++curr;
+                // }
+                printf("%d ",i);
+                // printf("\n");
             }
         }
     }

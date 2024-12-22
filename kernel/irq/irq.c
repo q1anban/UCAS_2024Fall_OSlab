@@ -114,7 +114,7 @@ void handle_store_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scau
 void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     // TODO: [p5-task4] external interrupt handler.
-    
+    printk("scause %lx\n", scause);
     // Note: plic_claim and plic_complete will be helpful ...
     uint32_t irq_ext = plic_claim();
     if(irq_ext == PLIC_E1000_IRQ)

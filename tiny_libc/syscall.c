@@ -277,38 +277,38 @@ int sys_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
 int sys_mkfs(void)
 {
     // TODO [P6-task1]: Implement sys_mkfs
-    return 0;  // sys_mkfs succeeds
+    return invoke_syscall(SYSCALL_FS_MKFS, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);  // sys_mkfs succeeds
 }
 
 int sys_statfs(void)
 {
     // TODO [P6-task1]: Implement sys_statfs
-    return 0;  // sys_statfs succeeds
+    return invoke_syscall(SYSCALL_FS_STATFS, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);  // sys_statfs succeeds
 }
 
 int sys_cd(char *path)
 {
     // TODO [P6-task1]: Implement sys_cd
-    return 0;  // sys_cd succeeds
+    return invoke_syscall(SYSCALL_FS_CD, (long)path, IGNORE, IGNORE, IGNORE, IGNORE);  // sys_cd succeeds
 }
 
 int sys_mkdir(char *path)
 {
     // TODO [P6-task1]: Implement sys_mkdir
-    return 0;  // sys_mkdir succeeds
+    return invoke_syscall(SYSCALL_FS_MKDIR, (long)path, IGNORE, IGNORE, IGNORE, IGNORE);  // sys_mkdir succeeds
 }
 
 int sys_rmdir(char *path)
 {
     // TODO [P6-task1]: Implement sys_rmdir
-    return 0;  // sys_rmdir succeeds
+    return invoke_syscall(SYSCALL_FS_RMDIR,(long)path,IGNORE,IGNORE,IGNORE,IGNORE);  // sys_rmdir succeeds
 }
 
 int sys_ls(char *path, int option)
 {
     // TODO [P6-task1]: Implement sys_ls
     // Note: argument 'option' serves for 'ls -l' in A-core
-    return 0;  // sys_ls succeeds
+    return invoke_syscall(SYSCALL_FS_LS,(long)path,(long)option,IGNORE,IGNORE,IGNORE);  // sys_ls succeeds
 }
 
 int sys_open(char *path, int mode)

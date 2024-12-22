@@ -34,10 +34,10 @@ int main(void)
     sys_move_cursor(0, print_location);
     printf("> [SEND] start send package.               \n");
 
-    for(int i = 0; i < 4; i++) {
-        sys_net_send(addr[i], len[i]);
+    for(int i = 0; i < 128; i++) {
+        sys_net_send(addr[i%4], len[i%4]);
         sys_move_cursor(0, print_location);
-        printf("> [SEND] totally send package %d/%d !         \n", i + 1, 4);
+        printf("> [SEND] totally send package %d/%d !         \n", i + 1, 128);
     }
 
     return 0;

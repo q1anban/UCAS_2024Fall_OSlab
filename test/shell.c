@@ -38,7 +38,7 @@
 char buf[BUFFER_SIZE];
 int i = 0;//end of string ,buf[i]='\0'
 
-
+char path [128];
 int atoi(char *str)
 {
     int num = 0;
@@ -77,6 +77,35 @@ int prev_space(int current)
     while(current>-1&&!isspace(buf[current-1]))
         current--;
     return current;
+}
+
+void sprint(char *str, char *append)
+{
+    strcat(str, append);
+    strcat(str, "/");
+}
+
+void remove_dot_dot(char *path) 
+{
+    int len = strlen(path);
+    int i = 0;
+    int j = 0;
+
+    while (i < len) {
+        if (path[i] == '/' && path[i + 1] == '.' && path[i + 2] == '.' && (path[i + 3] == '/' || path[i + 3] == '\0')) {
+            // Move j back to the previous directory
+            if (j > 0) {
+                j--; // Move back from the trailing '/'
+                while (j > 0 && path[j] != '/') {
+                    j--;
+                }
+            }
+            i += 3; // Skip over "/.."
+        } else {
+            path[j++] = path[i++];
+        }
+    }
+    path[j] = '\0';
 }
 
 char history[BUFFER_SIZE];
@@ -135,7 +164,6 @@ void parse()
         }
         else
             printf("Error:Failed to create process %s!\n", name);
-        
     }
     else if (strcmp(buf+command_start, "kill") == 0)
     {
@@ -149,6 +177,89 @@ void parse()
         sys_clear();
         sys_move_cursor(0, SHELL_BEGIN);
         printf("------------------- COMMAND -------------------\n");
+    }else if(strcmp(buf+command_start, "mkfs") == 0)
+    {
+        int result = sys_mkfs();
+        if(result==0)
+            printf("Info:File system created successfully!\n");
+        else if(result==-1)
+            printf("Error:Failed to read disk!\n");
+        else if(result==-2)
+            printf("Error:File system already exists!\n");
+        
+    }
+    else if(strcmp(buf+command_start, "statfs") == 0)
+    {
+        int result = sys_statfs();
+    }else if(strcmp(buf+command_start, "cd") == 0)
+    {
+        //don't support blank input
+        buf[next_space(arg_start)]='\0';
+        char new_path[128];
+        
+        if(buf[arg_start]=='/')
+        {
+            //absolute path
+            strcpy(new_path, buf+arg_start);
+        }
+        else
+        {
+            strcpy(new_path, path);
+            sprint(new_path,buf+arg_start);
+        }
+        remove_dot_dot(new_path);
+        if(sys_cd(new_path)==-1)
+        {
+            printf("Error:No such directory!\n");
+        }
+        else
+        {
+            strcpy(path, new_path);
+        }
+    }
+    else if(strcmp(buf+command_start, "mkdir") == 0)
+    {
+        int arg_end = next_space(arg_start);
+        buf[arg_end] = '\0';
+        char new_path[128];
+        strcpy(new_path, path);
+        sprint(new_path, buf+arg_start);
+        if (sys_mkdir(new_path)<0)
+        {
+            printf("Error:Failed to create directory!\n");
+        }
+    }
+    else if(strcmp(buf+command_start, "rmdir") == 0)
+    {
+        int arg_end = next_space(arg_start);
+        buf[arg_end] = '\0';
+        char new_path[128];
+        strcpy(new_path, path);
+        sprint(new_path, buf+arg_start);
+        if (sys_rmdir(new_path)<0)
+        {
+            printf("Error:Failed to remove directory!\n");
+        }
+    }
+    else if (strcmp(buf+command_start, "ls") == 0)
+    {
+        int option = 0;
+        if(i>arg_start)
+        {
+            if(buf[arg_start]=='-')
+            {
+                option = 1;
+                arg_start = next_printable(arg_start+1);
+            }
+        }
+        char new_path[128];
+        buf[next_space(i)] = '\0';
+        strcpy(new_path, path);
+        strcat(new_path, buf+arg_start);
+        if(sys_ls(new_path, option)<0)
+        {
+            printf("Error:Failed to list directory!\n");
+        }
     }
     else
     {
@@ -163,7 +274,9 @@ int main(void)
     sys_clear();
     sys_move_cursor(0, SHELL_BEGIN);
     printf("------------------- COMMAND -------------------\n");
-    printf("> root@UCAS_OS: ");
+
+    strcpy(path, "/");
+    printf("> root@UCAS_OS: %s#", path);
     while (1)
     {
         // TODO [P3-task1]: call syscall to read UART port
@@ -205,7 +318,7 @@ int main(void)
             history_index=1;
             strcpy(history, buf);
             parse();
-            printf("> root@UCAS_OS: ");
+            printf("> root@UCAS_OS: %s#", path);
         }
         else if(isprintable(ch) || isspace(ch))
         {

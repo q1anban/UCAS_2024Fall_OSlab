@@ -46,6 +46,7 @@
 #include <csr.h>
 #include <os/smp.h>
 #include <os/net.h>
+#include <os/fs.h>
 
 extern void ret_from_exception();
 
@@ -299,6 +300,13 @@ static void init_syscall(void)
     syscall[SYSCALL_MBOX_RECV] = (long (*)())do_mbox_recv;
     syscall[SYSCALL_NET_SEND] = (long (*)())do_net_send;
     syscall[SYSCALL_NET_RECV] = (long (*)())do_net_recv;
+    syscall[SYSCALL_FS_MKFS] = (long (*)())do_mkfs;
+    syscall[SYSCALL_FS_STATFS] = (long (*)())do_statfs;
+    syscall[SYSCALL_FS_CD] = (long (*)())do_cd;
+    syscall[SYSCALL_FS_LS] = (long (*)())do_ls;
+    syscall[SYSCALL_FS_MKDIR] = (long (*)())do_mkdir;
+    syscall[SYSCALL_FS_RMDIR] = (long (*)())do_rmdir;
+    syscall[SYSCALL_FS_OPEN] = (long (*)())do_open;
 
 }
 /************************************************************/
@@ -340,15 +348,22 @@ int main(void)
         time_base = bios_read_fdt(TIMEBASE);
         printk("> [INIT] CPU frequency is %d Hz.\n", time_base);
 
+        #ifdef NET
         e1000 = (volatile uint8_t *)bios_read_fdt(ETHERNET_ADDR);
         uint64_t plic_addr = bios_read_fdt(PLIC_ADDR);
         uint32_t nr_irqs = (uint32_t)bios_read_fdt(NR_IRQS);
         printk("> [INIT] e1000: %lx, plic_addr: %lx, nr_irqs: %lx.\n", e1000, plic_addr, nr_irqs);
-
         // IOremap
         plic_addr = (uintptr_t)ioremap((uint64_t)plic_addr, 0x4000 * NORMAL_PAGE_SIZE);
         e1000 = (uint8_t *)ioremap((uint64_t)e1000, 8 * NORMAL_PAGE_SIZE);
         printk("> [INIT] IOremap initialization succeeded.\n");
+        // TODO: [p5-task4] Init plic
+        plic_init(plic_addr, nr_irqs);
+        printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
+        // Init network device
+        e1000_init();
+        printk("> [INIT] E1000 device initialized successfully.\n");
+        #endif
 
         // Init lock mechanism o(´^｀)o
         init_locks();
@@ -357,14 +372,6 @@ int main(void)
         // Init interrupt (^_^)
         init_exception();
         printk("> [INIT] Interrupt processing initialization succeeded.\n");
-
-        // TODO: [p5-task4] Init plic
-        plic_init(plic_addr, nr_irqs);
-        printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
-
-        // Init network device
-        e1000_init();
-        printk("> [INIT] E1000 device initialized successfully.\n");
 
         // Init system call table (0_0)
         init_syscall();
@@ -386,7 +393,8 @@ int main(void)
         init_mbox();
         printk("> [INIT] Mailbox initialization succeeded.\n");
 
-        
+        init_fs();
+        printk("> [INIT] File system initialization succeeded.\n");
         
         // Init Shell
         test();

@@ -22,10 +22,11 @@ uint8_t free_pgt_map[PGT_PAGE_NUM];
 int clock_ptr=0;
 int sec_ptr=0;
 
-swap_info_t *swap_info = (swap_info_t*)SWAP_INFO_PLACE;
-
+swap_info_t  *swap_info = (swap_info_t*)SWAP_INFO_PLACE;
 //notice : kernel page will not have a va 
-uint64_t va_info[MEM_PAGE_NUM] ;// used to store the va of each KVA
+//uint64_t va_info[MEM_PAGE_NUM] ;// used to store the va of each KVA
+uint64_t *va_info = (uint64_t*)VA_INFO_PLACE;
+
 
 extern int padding_start_sec;//the first sector of padding
 

@@ -37,11 +37,14 @@
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK+PAGE_SIZE)
 
 #define PAGE_TABLE_SIZE 4096 // 4K
-#define INIT_KERNEL_PAGETABLE 0xffffffc054000000
-#define TEMP_TASK_IMG 0xffffffc056000000 //暂时存放task内容的地址
-#define SWAP_INFO_PLACE 0xffffffc055000000 //存放swap信息的地址
-#define VA_INFO_PLACE 0xffffffc055500000 //存放VA信息的地址
-#define SEC_INFO_PLACE 0xffffffc056500000 //存放sec信息的地址
+#define INIT_KERNEL_PAGETABLE   0xffffffc054000000
+#define SWAP_INFO_PLACE         0xffffffc055000000 //存放swap信息的地址
+#define VA_INFO_PLACE           0xffffffc055500000 //存放VA信息的地址
+#define TEMP_TASK_IMG           0xffffffc056000000 //暂时存放task内容的地址
+#define BLOCK_MAP_PLACE         0xffffffc056500000 //存放block map信息的地址
+#define INODE_PLACE             0xffffffc057000000 //存放inode信息的地址
+#define TEMP                    0xffffffc057500000 //暂时存放内容的地址
+
 
 /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))

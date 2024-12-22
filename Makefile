@@ -34,7 +34,7 @@ MINICOM         = minicom
 # Build/Debug Flags and Variables
 # -----------------------------------------------------------------------
 
-CFLAGS          = -O2 -fno-builtin -nostdlib -nostdinc -Wall -mcmodel=medany -ggdb3
+CFLAGS          = -O0 -fno-builtin -nostdlib -nostdinc -Wall -mcmodel=medany -ggdb3
 
 BOOT_INCLUDE    = -I$(DIR_ARCH)/include
 BOOT_CFLAGS     = $(CFLAGS) $(BOOT_INCLUDE) -Wl,--defsym=TEXT_START=$(BOOTLOADER_ENTRYPOINT) -T riscv.lds
@@ -120,6 +120,8 @@ ELF_CREATEIMAGE = $(DIR_BUILD)/$(notdir $(SRC_CREATEIMAGE:.c=))
 # Top-level Rules
 # -----------------------------------------------------------------------
 
+clean_and_build: clean all run
+
 all: dirs elf image asm padding#floppy
 
 dirs:
@@ -136,7 +138,7 @@ asm: $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
 	for elffile in $^; do $(OBJDUMP) -d $$elffile > $(notdir $$elffile).txt; done
 
 padding:
-	@dd if=/dev/zero of=$(DIR_BUILD)/image oflag=append conv=notrunc bs=8MB count=1
+	@dd if=/dev/zero of=$(DIR_BUILD)/image oflag=append conv=notrunc bs=512MB count=2
 
 gdb:
 	$(GDB) $(ELF_MAIN) -ex "target remote:1234"
