@@ -314,43 +314,43 @@ int sys_ls(char *path, int option)
 int sys_open(char *path, int mode)
 {
     // TODO [P6-task2]: Implement sys_open
-    return 0;  // return the id of file descriptor
+    return invoke_syscall(SYSCALL_FS_OPEN,(long)path,(long)mode,IGNORE,IGNORE,IGNORE);  // return the id of file descriptor
 }
 
 int sys_read(int fd, char *buff, int length)
 {
     // TODO [P6-task2]: Implement sys_read
-    return 0;  // return the length of trully read data
+    return invoke_syscall(SYSCALL_FS_READ,(long)fd,(long)buff,(long)length,IGNORE,IGNORE);  // return the length of trully read data
 }
 
 int sys_write(int fd, char *buff, int length)
 {
     // TODO [P6-task2]: Implement sys_write
-    return 0;  // return the length of trully written data
+    return invoke_syscall(SYSCALL_FS_WRITE,(long)fd,(long)buff,(long)length,IGNORE,IGNORE);  // return the length of trully written data
 }
 
 int sys_close(int fd)
 {
     // TODO [P6-task2]: Implement sys_close
-    return 0;  // sys_close succeeds
+    return invoke_syscall(SYSCALL_FS_CLOSE,(long)fd,IGNORE,IGNORE,IGNORE,IGNORE);  // sys_close succeeds
 }
 
 int sys_ln(char *src_path, char *dst_path)
 {
     // TODO [P6-task2]: Implement sys_ln
-    return 0;  // sys_ln succeeds 
+    return invoke_syscall(SYSCALL_FS_LN,(long)src_path,(long)dst_path,IGNORE,IGNORE,IGNORE);  // sys_ln succeeds 
 }
 
 int sys_rm(char *path)
 {
     // TODO [P6-task2]: Implement sys_rm
-    return 0;  // sys_rm succeeds 
+    return invoke_syscall(SYSCALL_FS_RM,(long)path,IGNORE,IGNORE,IGNORE,IGNORE);  // sys_rm succeeds 
 }
 
 int sys_lseek(int fd, int offset, int whence)
 {
     // TODO [P6-task2]: Implement sys_lseek
-    return 0;  // the resulting offset location from the beginning of the file
+    return invoke_syscall(SYSCALL_FS_LSEEK, (long)fd,(long)offset,(long)whence,IGNORE,IGNORE);  // the resulting offset location from the beginning of the file
 }
 /************************************************************/
 void sys_thread_create(pthread_t* thread, void* (*start_routine)(void*), void* arg)

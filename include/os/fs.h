@@ -14,6 +14,8 @@
 #define BLOCK_SIZE 4096 
 #define BLOCK_MAP_SIZE 1<<17 
 
+#define INDIRECT_SIZE (BLOCK_SIZE/sizeof(uint32_t))
+
 #define OWNER_READ 0x100
 #define OWNER_WRITE 0x080
 #define OWNER_EXEC 0x040
@@ -81,7 +83,6 @@ typedef struct fdesc {
 #define SEEK_END 2
 
 /* fs function declarations */
-extern int do_pwd(char*,int);
 extern int do_mkfs(void);
 extern int do_statfs(void);
 extern int do_cd(char *path);

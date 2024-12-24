@@ -44,6 +44,9 @@
 #define BLOCK_MAP_PLACE         0xffffffc056500000 //存放block map信息的地址
 #define INODE_PLACE             0xffffffc057000000 //存放inode信息的地址
 #define TEMP                    0xffffffc057500000 //暂时存放内容的地址
+#define TEMP2                   0xffffffc057600000 //暂时存放内容的地址
+#define TEMP3                   0xffffffc057700000 //暂时存放内容的地址
+#define TEMP4                   0xffffffc057800000 //暂时存放内容的地址
 
 
 /* Rounding; only works for n = power of two */
