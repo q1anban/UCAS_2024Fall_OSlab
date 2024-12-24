@@ -106,7 +106,13 @@ void remove_dot_dot(char *path)
             path[j++] = path[i++];
         }
     }
-    path[j] = '\0';
+    if(j!=0)
+        path[j] = '\0';
+    else
+    {
+        path[j] = '/';
+        path[j+1] = '\0';
+    }
 }
 
 char history[BUFFER_SIZE];
@@ -191,7 +197,7 @@ void parse()
     }
     else if(strcmp(buf+command_start, "statfs") == 0)
     {
-        int result = sys_statfs();
+        sys_statfs();
     }else if(strcmp(buf+command_start, "cd") == 0)
     {
         //don't support blank input
@@ -229,8 +235,7 @@ void parse()
         int arg_end = next_space(arg_start);
         buf[arg_end] = '\0';
         char new_path[128];
-        strcpy(new_path, path);
-        strcat(new_path, buf+arg_start);
+        strcpy(new_path, buf+arg_start);
         if (sys_mkdir(new_path)<0)
         {
             printf("Error:Failed to create directory!\n");
@@ -241,10 +246,7 @@ void parse()
         int arg_end = next_space(arg_start);
         buf[arg_end] = '\0';
         char new_path[128];
-        strcpy(new_path, path);
-        if(new_path[strlen(new_path)-1]!='/')
-                strcat(new_path,"/");
-        strcat(new_path, buf+arg_start);
+        strcpy(new_path, buf+arg_start);
         if (sys_rmdir(new_path)<0)
         {
             printf("Error:Failed to remove directory!\n");
@@ -258,13 +260,12 @@ void parse()
             if(buf[arg_start]=='-')
             {
                 option = 1;
-                arg_start = next_printable(next_space(arg_start+1));
+                arg_start = next_printable(next_space(arg_start));
             }
         }
         char new_path[128];
-        buf[next_space(i)] = '\0';
-        strcpy(new_path, path);
-        strcat(new_path, buf+arg_start);
+        buf[next_space(arg_start)] = '\0';
+        strcpy(new_path, buf+arg_start);
         if(sys_ls(new_path, option)<0)
         {
             printf("Error:Failed to list directory!\n");
@@ -274,17 +275,8 @@ void parse()
         buf[next_space(arg_start)]='\0';
         char new_path[128];
         
-        if(buf[arg_start]=='/')
-        {
-            //absolute path
-            strcpy(new_path, buf+arg_start);
-        }
-        else
-        {
-            strcpy(new_path, path);
-            strcat(new_path,buf+arg_start);
-        }
-        remove_dot_dot(new_path);
+        strcpy(new_path, buf+arg_start);
+        
         int fd = sys_open(new_path, O_RDWR);
         sys_close(fd);
     }
@@ -292,17 +284,7 @@ void parse()
     {
         buf[next_space(arg_start)]='\0';
         char new_path[128];
-        if(buf[arg_start]=='/')
-        {
-            //absolute path
-            strcpy(new_path, buf+arg_start);
-        }
-        else
-        {
-            strcpy(new_path, path);
-            strcpy(new_path,buf+arg_start);
-        }
-        remove_dot_dot(new_path);
+        strcpy(new_path, buf+arg_start);
         int fd = sys_open(new_path, O_RDWR);
         if(fd<0)
         {
@@ -332,17 +314,7 @@ void parse()
     {
         buf[next_space(arg_start)]='\0';
         char new_path[128];
-        if(buf[arg_start]=='/')
-        {
-            //absolute path
-            strcpy(new_path, buf+arg_start);
-        }
-        else
-        {
-            strcpy(new_path, path);
-            strcpy(new_path,buf+arg_start);
-        }
-        remove_dot_dot(new_path);
+        strcpy(new_path, buf+arg_start);
         sys_rm(new_path);
     }
     else

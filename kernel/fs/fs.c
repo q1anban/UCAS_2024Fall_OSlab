@@ -559,6 +559,7 @@ int do_open(char *path, int mode)
     int finished = 0;
     int inode_to_open;
     int empty_dentry=-1;
+    int empty_i=-1;
     int find_empty_dentry = 0;
     for(i=0;i<8;i++)
     {
@@ -574,6 +575,7 @@ int do_open(char *path, int mode)
                 break;
             }else if(de[j].name[0] == 0 && !find_empty_dentry)
             {
+                empty_i = i;
                 empty_dentry = j;
                 find_empty_dentry = 1;
             }
@@ -588,9 +590,11 @@ int do_open(char *path, int mode)
         //test if there are empty dentry to use
         if(find_empty_dentry)
         {
+            load_a_data_block(inodes[follow_inode].sec[empty_i]);
             strcpy(de[empty_dentry].name,name);
             de[empty_dentry].inode_num = get_free_inode();
             inode_to_open = de[empty_dentry].inode_num;
+            store_a_data_block(inodes[follow_inode].sec[empty_i]);
         }
         //else allocate a new sec
         else
@@ -600,9 +604,9 @@ int do_open(char *path, int mode)
             strcpy(de[0].name,name);
             de[0].inode_num = get_free_inode();
             inode_to_open = de[0].inode_num;
+            store_a_data_block(inodes[follow_inode].sec[i]);
         }
-        store_a_data_block(inodes[follow_inode].sec[i]);
-
+        
         inodes[inode_to_open].link += 1;
         inodes[inode_to_open].indirect_flag = 1;
         inodes[inode_to_open].mode = OWNER_EXEC | OWNER_READ | OWNER_WRITE | GROUP_READ | GROUP_EXEC | OTHER_READ | OTHER_EXEC;
@@ -920,6 +924,7 @@ int do_ln(char *src_path, char *dst_path)
     int l;
     int find_empty_dentry = 0;
     int empty_dentry = -1;
+    int empty_sec = -1;
     for(k=0;k<8;k++)
     {
         if(directory_sec_is_not_used(follow_inode,k))
@@ -929,6 +934,7 @@ int do_ln(char *src_path, char *dst_path)
         {
             if(de1[l].name[0] == 0 && !find_empty_dentry)
             {
+                empty_sec = k;
                 empty_dentry = l;
                 find_empty_dentry = 1;
             }
@@ -955,11 +961,13 @@ int do_ln(char *src_path, char *dst_path)
         de1[0].inode_num = inode_to_link;
     }else//find a empty dentry
     {
+        k=empty_sec;
+        load_a_data_block(inodes[follow_inode].sec[k]);
         strcpy(de1[empty_dentry].name,name);
         de1[empty_dentry].inode_num = inode_to_link;
     }
     inodes[inode_to_link].link++;
-    store_a_data_block(inodes[inode_to_link].sec[k]);
+    store_a_data_block(inodes[follow_inode].sec[k]);
 
     store_inode_map();
     store_inodes();
