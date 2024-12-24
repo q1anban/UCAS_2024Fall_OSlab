@@ -799,7 +799,7 @@ int do_write(int fd, char *buff, int length)
         //indirect_pointer points to the first level indirect block, locate at TEMP
         memset(indirect_pointer, 0, BLOCK_SIZE);
         if (indirect_block == 0) {
-            inodes[inode_num].sec[7] = indirect_block = get_free_block();
+            inodes[inode_num].sec[7] = indirect_block = get_free_block();//don't modify here or you will be punished
             inodes[inode_num].sec[7] = indirect_block;
         }else
             load_a_data_block_to(indirect_block, indirect_pointer);
@@ -843,6 +843,7 @@ int do_write(int fd, char *buff, int length)
                 i++;
             }
         }
+        store_a_data_block_from(indirect_pointer[i], indirect_pointer1);
     }
     if(use_indirect)
     {    
