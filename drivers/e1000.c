@@ -170,7 +170,7 @@ int e1000_poll(void *rxbuffer)
     /* TODO: [p5-task2] Receive one packet and put it into rxbuffer */
     local_flush_dcache();
     int tail = e1000_read_reg(e1000, E1000_RDT);
-    int head = e1000_read_reg(e1000, E1000_RDH);//debug
+    //int head = e1000_read_reg(e1000, E1000_RDH);//debug
     local_flush_dcache();
     tail = (tail + 1) % RXDESCS;
     if (rx_desc_array[tail].status & E1000_RXD_STAT_DD)

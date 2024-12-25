@@ -57,11 +57,12 @@ typedef struct dentry {
 
 typedef struct inode{ 
     // TODO [P6-task1]: Implement the data structure of inode
+    //we use 7 direct blocks and 1 indirect block for a file , 8 direct blocks for a directory
     uint32_t mode;
     uint32_t size;
     uint32_t link;
     uint32_t sec[8];
-    uint32_t indirect_flag; 
+    uint32_t parent_inode; 
 } inode_t;
 
 typedef struct fdesc {
@@ -69,6 +70,7 @@ typedef struct fdesc {
     int mode;
     int offset;
     int inode_num;
+    int follow_inode;
     int ref_count;
 } fdesc_t;
 

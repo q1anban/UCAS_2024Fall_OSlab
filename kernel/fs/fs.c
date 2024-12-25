@@ -36,33 +36,33 @@ inline static int get_start_sec(int offset)
 
 inline static void store_superblock(void)
 {
-    sd_write(kva2pa(&superblock),1,get_start_sec(0));
+    sd_write(kva2pa((uintptr_t)&superblock),1,get_start_sec(0));
 }
 
 inline static void load_superblock(void)
 {
     sd_read(kva2pa(TEMP),1,START_SEC);
-    memcpy(&superblock,TEMP,sizeof(superblock_t));
+    memcpy((uint8_t*)&superblock,(uint8_t*)TEMP,sizeof(superblock_t));
 }
 
 inline static void store_inode_map(void)
 {
-    sd_write(kva2pa(inode_map),INODE_NUM/SEC_SIZE,get_start_sec(superblock.inode_map_offset));
+    sd_write(kva2pa((uintptr_t)inode_map),INODE_NUM/SEC_SIZE,get_start_sec(superblock.inode_map_offset));
 }
 
 inline static void load_inode_map(void)
 {
-    sd_read(kva2pa(inode_map),INODE_NUM/SEC_SIZE,get_start_sec(superblock.inode_map_offset));
+    sd_read(kva2pa((uintptr_t)inode_map),INODE_NUM/SEC_SIZE,get_start_sec(superblock.inode_map_offset));
 }
 
 inline static void store_block_map(void)
 {
-    sd_write(kva2pa(block_map),BLOCK_MAP_SIZE/SEC_SIZE,get_start_sec(superblock.block_map_offset));
+    sd_write(kva2pa((uintptr_t)block_map),BLOCK_MAP_SIZE/SEC_SIZE,get_start_sec(superblock.block_map_offset));
 }
 
 inline static void load_block_map(void)
 {
-    sd_read(kva2pa(block_map),BLOCK_MAP_SIZE/SEC_SIZE,get_start_sec(superblock.block_map_offset));
+    sd_read(kva2pa((uintptr_t)block_map),BLOCK_MAP_SIZE/SEC_SIZE,get_start_sec(superblock.block_map_offset));
 }
 
 inline static void store_inodes(void)
@@ -80,6 +80,11 @@ inline static int directory_sec_is_not_used(int inode_num,int sec_num)
     return (inodes[inode_num].sec[sec_num] == 0 && ((inode_num != 0) || (inode_num ==0 && sec_num > 0)));
 }
 
+inline static int inode_valid(int inode_num)
+{
+    return inode_map[inode_num];
+}
+
 //assume data block is already in TEMP
 //block is the block number of the data block
 inline static void store_a_data_block(int block) 
@@ -89,7 +94,7 @@ inline static void store_a_data_block(int block)
 
 inline static void store_a_data_block_from(int block,uint8_t* src)
 {
-    sd_write(kva2pa(src),BLOCK_SIZE / SEC_SIZE,get_start_sec(superblock.data_offset+block*BLOCK_SIZE));
+    sd_write(kva2pa((uintptr_t)src),BLOCK_SIZE / SEC_SIZE,get_start_sec(superblock.data_offset+block*BLOCK_SIZE));
 }
 
 //load the block to TEMP
@@ -100,7 +105,7 @@ inline static void load_a_data_block(int block)
 
 inline static void load_a_data_block_to(int block,uint8_t* dest)
 {
-    sd_read(kva2pa(dest),BLOCK_SIZE / SEC_SIZE,get_start_sec(superblock.data_offset+block*BLOCK_SIZE));
+    sd_read(kva2pa((uintptr_t)dest),BLOCK_SIZE / SEC_SIZE,get_start_sec(superblock.data_offset+block*BLOCK_SIZE));
 }
 
 int get_free_inode(void)
@@ -198,7 +203,7 @@ int parse_path(char* path)
     while(token!=NULL)
     {
         //now find token in follow_inode 's dentry
-        dentry_t* de = TEMP;
+        dentry_t* de = (dentry_t*)TEMP;
         for(int i=0;i< 8 ;i++) //every inode contain 8 sec
         {
             if(directory_sec_is_not_used(follow_inode,i)) //no more dentry
@@ -206,7 +211,7 @@ int parse_path(char* path)
             load_a_data_block(inodes[follow_inode].sec[i]);
             for(int j=0;j<BLOCK_SIZE/sizeof(dentry_t);j++)
             {
-                if(strcmp(de[j].name,token)==0)
+                if(inode_valid(de[j].inode_num) && strcmp(de[j].name,token)==0)
                 {
                     follow_inode = de[j].inode_num;
                     find = 1;
@@ -240,7 +245,7 @@ int do_mkfs(void)
     {   
         return -1;//failed to read
     }
-    memcpy(&superblock,TEMP,sizeof(superblock_t));
+    memcpy((uint8_t*)&superblock,(uint8_t*)TEMP,sizeof(superblock_t));
     if(superblock.magic == SUPERBLOCK_MAGIC)
     {
         return  -2;//fs already exists
@@ -266,18 +271,18 @@ int do_mkfs(void)
     //initialize root inode
     //root inode is the first inode
     inode_map[0] = 1;
-    inode_t* root_inode = INODE_PLACE; // the first inode
+    inode_t* root_inode =(inode_t*) INODE_PLACE; // the first inode
     //no need to add excute permission to root since it will be opened by operating system
     root_inode->mode = OWNER_READ | OWNER_WRITE | GROUP_READ | OTHER_READ;
     root_inode->size = 0;
-    root_inode->indirect_flag = 0;
+    root_inode->parent_inode = -1;//root has no parent
     root_inode->sec[0] = 0;
     root_inode->link = 1;
 
     block_map[0] = 1; //block 0 is used by root inode
 
     //every directory has a dentry "." , every directory except root has a dentry ".."
-    dentry_t* de =  TEMP; 
+    dentry_t* de = (dentry_t*) TEMP; 
     memset(de,0,BLOCK_SIZE);
     strcpy(de->name,".");
     de->inode_num = 0;    
@@ -373,12 +378,12 @@ int do_mkdir(char *path)
     int new_inode = get_free_inode();
     inodes[new_inode].mode = OWNER_READ | OWNER_WRITE| OWNER_EXEC | GROUP_READ | GROUP_EXEC |OTHER_READ | OTHER_EXEC;
     inodes[new_inode].size = 0;
-    inodes[new_inode].indirect_flag = 0;
+    inodes[new_inode].parent_inode = follow_inode;
     inodes[new_inode].link = 2;
     
     //now follow_inode is the place for the directory to create
     //scan if the directory already exists
-    dentry_t* de = TEMP;
+    dentry_t* de =(dentry_t*) TEMP;
     int i;//sec for new dentry to store
     int finished=0;
     for ( i= 0; i < 8; i++)
@@ -389,7 +394,7 @@ int do_mkdir(char *path)
         load_a_data_block(inodes[follow_inode].sec[i]);
         for(int j=0;j<BLOCK_SIZE/sizeof(dentry_t);j++)
         {
-            if(de[j].name[0] == 0)
+            if(de[j].name[0]==0)
             {
                 //available dentry 
                 strcpy(de[j].name,name);
@@ -398,7 +403,7 @@ int do_mkdir(char *path)
                 finished = 1;
                 break;
             }
-            else if(strcmp(de[j].name,name)==0)
+            else if(strcmp(de[j].name,name)==0 && inode_valid(de[j].inode_num))
             {
                 return -2; //directory already exists
             }
@@ -414,9 +419,9 @@ int do_mkdir(char *path)
         //create a new sec 
         inodes[follow_inode].sec[i] = get_free_block();
         inodes[follow_inode].size += BLOCK_SIZE;
-        inodes[follow_inode].indirect_flag = 0;
+        inodes[follow_inode].parent_inode = follow_inode;
         inodes[follow_inode].link++;
-        memset(TEMP,0,BLOCK_SIZE);
+        memset((uint8_t*)TEMP,0,BLOCK_SIZE);
         strcpy(de[0].name,name);
         de[0].inode_num = new_inode;
     }
@@ -428,7 +433,7 @@ int do_mkdir(char *path)
     int new_block = get_free_block();
     inodes[new_inode].sec[0] = new_block;
     //store inode and name 
-    memset(TEMP,0,BLOCK_SIZE);
+    memset((uint8_t*)TEMP,0,BLOCK_SIZE);
     strcpy(de[0].name,".");
     de[0].inode_num = new_inode;
     strcpy(de[1].name,"..");
@@ -458,7 +463,7 @@ int do_rmdir(char *path)
         return -1; //no such directory
     }
     //find the dentry of the directory to remove
-    dentry_t* de = TEMP;
+    dentry_t* de = (dentry_t*)TEMP;
     int i;
     int j;
     int finished = 0;
@@ -470,7 +475,7 @@ int do_rmdir(char *path)
         load_a_data_block(inodes[follow_inode].sec[i]);
         for(j=0;j<BLOCK_SIZE/sizeof(dentry_t);j++)
         {
-            if(strcmp(de[j].name,name)==0)
+            if(strcmp(de[j].name,name)==0 && inode_valid(de[j].inode_num))
             {
                 inode_to_remove = de[j].inode_num;
                 memset(de+j,0,sizeof(dentry_t));
@@ -520,10 +525,10 @@ int do_ls(char *path, int option)
         if(directory_sec_is_not_used(follow_inode,i))
             break;
         load_a_data_block(inodes[follow_inode].sec[i]);
-        dentry_t* de = TEMP;
+        dentry_t* de = (dentry_t*)TEMP;
         for(int j=0;j<BLOCK_SIZE/sizeof(dentry_t);j++)
         {
-            if(de[j].name[0]!=0)
+            if(de[j].name[0]!=0 && inode_valid(de[j].inode_num))
             {
                 
                 if(option)
@@ -553,7 +558,7 @@ int do_open(char *path, int mode)
         return -1; //no such directory
     }
     //find the dentry of the file to open
-    dentry_t* de = TEMP;
+    dentry_t* de =(dentry_t*) TEMP;
     int i;
     int j;
     int finished = 0;
@@ -568,7 +573,7 @@ int do_open(char *path, int mode)
         load_a_data_block(inodes[follow_inode].sec[i]);
         for(j=0;j<BLOCK_SIZE/sizeof(dentry_t);j++)
         {
-            if(strcmp(de[j].name,name)==0)//file exists
+            if(strcmp(de[j].name,name)==0 && inode_valid(de[j].inode_num))//file exists
             {
                 inode_to_open = de[j].inode_num;
                 finished = 1;
@@ -600,7 +605,7 @@ int do_open(char *path, int mode)
         else
         {
             inodes[follow_inode].sec[i] = get_free_block();
-            memset(TEMP,0,BLOCK_SIZE);
+            memset((uint8_t*)TEMP,0,BLOCK_SIZE);
             strcpy(de[0].name,name);
             de[0].inode_num = get_free_inode();
             inode_to_open = de[0].inode_num;
@@ -608,7 +613,7 @@ int do_open(char *path, int mode)
         }
         
         inodes[inode_to_open].link += 1;
-        inodes[inode_to_open].indirect_flag = 1;
+        inodes[inode_to_open].parent_inode = follow_inode;
         inodes[inode_to_open].mode = OWNER_EXEC | OWNER_READ | OWNER_WRITE | GROUP_READ | GROUP_EXEC | OTHER_READ | OTHER_EXEC;
         inodes[inode_to_open].size = 0;
     }
@@ -627,6 +632,7 @@ int do_open(char *path, int mode)
             fdesc_array[fd].inode_num = inode_to_open;
             fdesc_array[fd].mode = mode;
             fdesc_array[fd].offset = 0;
+            fdesc_array[fd].follow_inode = follow_inode;
             break;
         }
     }
@@ -660,7 +666,7 @@ int do_read(int fd, char *buff, int length)
         load_a_data_block(inodes[inode_num].sec[offset_block_num]);
         int copy_size = (BLOCK_SIZE - offset_in_block < read_size) ? BLOCK_SIZE - offset_in_block : read_size;
         if (copy_size > 0) {
-            memcpy(buff, TEMP + offset_in_block, copy_size);
+            memcpy((uint8_t*)buff, (uint8_t*)(TEMP + offset_in_block), copy_size);
         }
         read_size -= copy_size;
         buff += copy_size;
@@ -677,7 +683,7 @@ int do_read(int fd, char *buff, int length)
         int second_level_indirect_block = offset_block_num % INDIRECT_SIZE;
 
         //indirect_pointer points to the first level indirect block, locate at TEMP
-        load_a_data_block_to(indirect_block, indirect_pointer); // indirect_block can't be zero since read size is not zero
+        load_a_data_block_to(indirect_block,(uint8_t*) indirect_pointer); // indirect_block can't be zero since read size is not zero
 
         int i = first_level_indirect_block; // used to control the first level indirect block
         int j = second_level_indirect_block; // used to control the second level indirect block
@@ -704,7 +710,7 @@ int do_read(int fd, char *buff, int length)
             }
             else // first level data
             {
-                load_a_data_block_to(indirect_pointer[i], indirect_pointer1);
+                load_a_data_block_to(indirect_pointer[i], (uint8_t*)indirect_pointer1);
                 if (indirect_pointer1[j] == 0) // second level hole
                 {
                     // second level hole indicates BLOCK_SIZE bytes of hole
@@ -729,9 +735,9 @@ int do_read(int fd, char *buff, int length)
                 }
                 else // second level data
                 {
-                    load_a_data_block_to(indirect_pointer1[j], indirect_pointer2);
+                    load_a_data_block_to(indirect_pointer1[j], (uint8_t*)indirect_pointer2);
                     int copy_size = (read_size >= BLOCK_SIZE - k) ? BLOCK_SIZE - k : read_size;
-                    memcpy(buff, indirect_pointer2 + k, copy_size);
+                    memcpy((uint8_t*)buff, (uint8_t*)(indirect_pointer2) + k, copy_size);
                     read_size -= copy_size;
                     buff += copy_size;
 
@@ -774,10 +780,10 @@ int do_write(int fd, char *buff, int length)
             inodes[inode_num].sec[offset_block_num] = get_free_block();//don't foget to update inode
         }   
         else// Load the data block into TEMP4 to modify its content before writing back
-            load_a_data_block_to(inodes[inode_num].sec[offset_block_num],TEMP4);
+            load_a_data_block_to(inodes[inode_num].sec[offset_block_num],(uint8_t*)TEMP4);
         int copy_size = (BLOCK_SIZE - offset_in_block < write_size) ? BLOCK_SIZE - offset_in_block : write_size;
-        memcpy(TEMP4 + offset_in_block, buff, copy_size);
-        store_a_data_block_from(inodes[inode_num].sec[offset_block_num], TEMP4);
+        memcpy((uint8_t*)(TEMP4 + offset_in_block), (uint8_t*)buff, copy_size);
+        store_a_data_block_from(inodes[inode_num].sec[offset_block_num], (uint8_t*)TEMP4);
         write_size -= copy_size;
         buff += copy_size;
         offset_in_block = 0;
@@ -786,12 +792,9 @@ int do_write(int fd, char *buff, int length)
 
     offset_block_num -= 7;
 
-    int use_indirect=0;
-
     if (write_size > 0)
     {
         //indirect block
-        use_indirect = 1;
         int indirect_block = inodes[inode_num].sec[7];
         int first_level_indirect_block = offset_block_num / INDIRECT_SIZE;
         int second_level_indirect_block = offset_block_num % INDIRECT_SIZE;
@@ -802,7 +805,7 @@ int do_write(int fd, char *buff, int length)
             inodes[inode_num].sec[7] = indirect_block = get_free_block();//don't modify here or you will be punished
             inodes[inode_num].sec[7] = indirect_block;
         }else
-            load_a_data_block_to(indirect_block, indirect_pointer);
+            load_a_data_block_to(indirect_block,(uint8_t*) indirect_pointer);
 
         int i = first_level_indirect_block; // used to control the first level indirect block
         int j = second_level_indirect_block; // used to control the second level indirect block
@@ -817,7 +820,7 @@ int do_write(int fd, char *buff, int length)
             }
             else // first level indirect block
             {
-                load_a_data_block_to(indirect_pointer[i], indirect_pointer1);
+                load_a_data_block_to(indirect_pointer[i],(uint8_t*) indirect_pointer1);
             }
             if(indirect_pointer1[j] == 0) // second level hole
             {
@@ -827,11 +830,11 @@ int do_write(int fd, char *buff, int length)
             }
             else // second level indirect block
             {
-                load_a_data_block_to(indirect_pointer1[j], indirect_pointer2);
+                load_a_data_block_to(indirect_pointer1[j], (uint8_t*)indirect_pointer2);
             }
             int copy_size = (BLOCK_SIZE - k < write_size) ? BLOCK_SIZE - k : write_size;
-            memcpy(indirect_pointer2 + k, buff, copy_size);
-            store_a_data_block_from(indirect_pointer1[j], indirect_pointer2);
+            memcpy((uint8_t*)(indirect_pointer2) + k, (uint8_t*)buff, copy_size);
+            store_a_data_block_from(indirect_pointer1[j], (uint8_t*)indirect_pointer2);
             write_size -= copy_size;
             buff += copy_size;
             k=0;
@@ -839,18 +842,24 @@ int do_write(int fd, char *buff, int length)
             if (j == INDIRECT_SIZE)
             {
                 j = 0;
-                store_a_data_block_from(indirect_pointer[i], indirect_pointer1);
+                store_a_data_block_from(indirect_pointer[i], (uint8_t*)indirect_pointer1);
                 i++;
             }
         }
-        store_a_data_block_from(indirect_pointer[i], indirect_pointer1);
+        store_a_data_block_from(indirect_pointer[i], (uint8_t*)indirect_pointer1);
+        store_a_data_block_from(inodes[inode_num].sec[7],(uint8_t*)indirect_pointer);
     }
-    if(use_indirect)
-    {    
-        store_a_data_block_from(inodes[inode_num].sec[7],indirect_pointer);
-    }
+
+    int add_size;
     if (offset + length > inodes[inode_num].size) {
-        inodes[inode_num].size = offset + length;
+        add_size = offset + length - inodes[inode_num].size;
+        //follow back to all it parent directory to update the size
+        int it = inode_num;
+        do
+        {
+            inodes[it].size += add_size;
+            it = inodes[it].parent_inode;
+        } while (it != -1);
     }
     fdesc_array[fd].offset += length;
     store_block_map();
@@ -881,7 +890,7 @@ int do_ln(char *src_path, char *dst_path)
         return -1; //no such directory
     }
     //find the dentry of the file to link
-    dentry_t* de = TEMP;
+    dentry_t* de = (dentry_t*)TEMP;
     int i;
     int j;
     int finished = 0;
@@ -893,7 +902,7 @@ int do_ln(char *src_path, char *dst_path)
         load_a_data_block(inodes[follow_inode].sec[i]);
         for(j=0;j<BLOCK_SIZE/sizeof(dentry_t);j++)
         {
-            if(strcmp(de[j].name,name)==0)
+            if(strcmp(de[j].name,name)==0 && inode_valid(de[j].inode_num))
             {
                 inode_to_link = de[j].inode_num;
                 finished = 1;
@@ -920,7 +929,7 @@ int do_ln(char *src_path, char *dst_path)
     }
     //create the link
     //find a free dentry
-    dentry_t* de1 = TEMP;
+    dentry_t* de1 = (dentry_t*)TEMP;
     int k;
     int l;
     int find_empty_dentry = 0;
@@ -939,7 +948,7 @@ int do_ln(char *src_path, char *dst_path)
                 empty_dentry = l;
                 find_empty_dentry = 1;
             }
-            else if(strcmp(de1[l].name,name)==0)
+            else if(strcmp(de1[l].name,name)==0 && inode_valid(de1[l].inode_num))
             {
                 return -4; //link already exists
             }
@@ -954,10 +963,8 @@ int do_ln(char *src_path, char *dst_path)
         //no available dentry
         //create a new sec 
         inodes[follow_inode].sec[k] = get_free_block();
-        inodes[follow_inode].size += BLOCK_SIZE;
-        inodes[follow_inode].indirect_flag = 0;
         inodes[follow_inode].link++;
-        memset(TEMP,0,BLOCK_SIZE);
+        memset((void*)TEMP,0,BLOCK_SIZE);
         strcpy(de1[0].name,name);
         de1[0].inode_num = inode_to_link;
     }else//find a empty dentry
@@ -991,7 +998,7 @@ int do_rm(char *path)
     }
 
     //find the dentry of the file to remove
-    dentry_t* de = TEMP;
+    dentry_t* de = (dentry_t*)TEMP;
     int i;
     int j;
     int finished = 0;
@@ -1004,7 +1011,7 @@ int do_rm(char *path)
         load_a_data_block(inodes[follow_inode].sec[i]);
         for(j=0;j<BLOCK_SIZE/sizeof(dentry_t);j++)
         {
-            if(strcmp(de[j].name,name)==0)
+            if(strcmp(de[j].name,name)==0 && inode_valid(de[j].inode_num))
             {
                 inode_to_remove = de[j].inode_num;
                 memset(de+j,0,sizeof(dentry_t));
@@ -1037,7 +1044,7 @@ int do_rm(char *path)
             {
                 if(indirect_pointer[i]!=0)
                 {
-                    load_a_data_block(indirect_pointer[i]);
+                    load_a_data_block_to(indirect_pointer[i],(uint8_t*) indirect_pointer1);
                     for(int j=0;j<INDIRECT_SIZE;j++)
                     {
                         if(indirect_pointer1[j]!=0)
@@ -1050,7 +1057,15 @@ int do_rm(char *path)
             }
             block_map[inodes[inode_to_remove].sec[7]] = 0;
         }
+        int sz = inodes[inode_to_remove].size;
+        int it = inodes[inode_to_remove].parent_inode;
+        while(it != -1)
+        {
+            inodes[it].size -= sz;
+            it = inodes[it].parent_inode;
+        }
     }
+    
 
     store_inode_map();
     store_inodes();
