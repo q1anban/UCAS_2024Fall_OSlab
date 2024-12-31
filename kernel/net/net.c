@@ -11,8 +11,8 @@
 static LIST_HEAD(send_block_queue);
 static LIST_HEAD(recv_block_queue);
 
-#define RECV_BUFFER_NUM 16
-#define RECV_BUFFER_SIZE 2048
+#define RECV_BUFFER_NUM 1
+#define RECV_BUFFER_SIZE 128
 int pt=0;
 int ph=0;
 char pk_dd[RECV_BUFFER_NUM];

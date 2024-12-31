@@ -517,7 +517,7 @@ int do_ls(char *path, int option)
     
     if(option)
     {
-        printk("        size\t  mode\t  link\t ino\t");
+        printk("        size\t  mode\t  link\t ino\t sec\t  no\t");
     }
     printk("name\n");
     for(int i=0;i<8;i++)
@@ -533,7 +533,7 @@ int do_ls(char *path, int option)
                 
                 if(option)
                 {
-                    printk("%12d\t%6x\t%6d\t%4d\t",inodes[de[j].inode_num].size,inodes[de[j].inode_num].mode,inodes[de[j].inode_num].link,de[j].inode_num);
+                    printk("%12d\t%6x\t%6d\t%4d\t%4d\t%4d\t",inodes[de[j].inode_num].size,inodes[de[j].inode_num].mode,inodes[de[j].inode_num].link,de[j].inode_num,i,j);
                 }
                 printk("%s\n",de[j].name);
             }
@@ -803,7 +803,6 @@ int do_write(int fd, char *buff, int length)
         memset(indirect_pointer, 0, BLOCK_SIZE);
         if (indirect_block == 0) {
             inodes[inode_num].sec[7] = indirect_block = get_free_block();//don't modify here or you will be punished
-            inodes[inode_num].sec[7] = indirect_block;
         }else
             load_a_data_block_to(indirect_block,(uint8_t*) indirect_pointer);
 
